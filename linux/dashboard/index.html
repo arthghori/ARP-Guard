@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ARP Guard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0e14;
+    --panel: #11161f;
+    --panel-2: #0d1219;
+    --border: #1e2530;
+    --text: #e8eaed;
+    --muted: #6b7685;
+    --safe: #3ddc84;
+    --danger: #ff4757;
+    --warn: #ffa502;
+    --data: #4fc3f7;
+    --font-ui: "Space Grotesk", sans-serif;
+    --font-data: "JetBrains Mono", monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-ui);
+    padding: 20px 28px 50px;
+    max-width: 1180px;
+    margin: 0 auto;
+  }
+
+  a { color: inherit; }
+  :focus-visible { outline: 2px solid var(--data); outline-offset: 2px; }
+
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 12px;
+    padding-bottom: 16px; margin-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 700; letter-spacing: 0.5px; }
+  .brand-mark { color: var(--safe); font-size: 20px; }
+  .os-badge {
+    font-size: 11px; font-family: var(--font-data); color: var(--muted);
+    padding: 4px 10px; border: 1px solid var(--border); border-radius: 999px; margin-left: 6px;
+  }
+  .nav { display: flex; gap: 4px; flex-wrap: wrap; }
+  .navlink {
+    padding: 7px 13px; border-radius: 7px; text-decoration: none;
+    font-size: 12.5px; font-weight: 500; color: var(--muted);
+  }
+  .navlink:hover { background: var(--panel); color: var(--text); }
+  .navlink.active { background: rgba(61,220,132,0.12); color: var(--safe); }
+
+  .hero {
+    display: flex; align-items: stretch; gap: 24px;
+    flex-wrap: wrap;
+    margin-bottom: 22px;
+  }
+  .hero-status {
+    flex: 1 1 320px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 28px 32px;
+    display: flex; flex-direction: column; justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .status-word {
+    font-size: 40px; font-weight: 700; letter-spacing: 0.5px;
+    color: var(--safe);
+    transition: color 0.3s;
+    line-height: 1.1;
+  }
+  .status-word.danger { color: var(--danger); }
+  .status-word.warn { color: var(--warn); }
+  .status-sub { color: var(--muted); font-size: 13.5px; margin-top: 8px; }
+  .pulse-ring {
+    position: absolute; top: 24px; right: 28px;
+    width: 12px; height: 12px; border-radius: 50%;
+    background: var(--safe);
+  }
+  .pulse-ring.danger { background: var(--danger); animation: pulse 1s infinite; }
+  .pulse-ring.warn { background: var(--warn); animation: pulse 0.6s infinite; }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(1.4); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pulse-ring.danger, .pulse-ring.warn { animation: none; }
+  }
+
+  .hero-stats {
+    flex: 0 0 auto;
+    display: flex; gap: 14px;
+  }
+  .stat {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px 24px;
+    min-width: 118px;
+    display: flex; flex-direction: column; justify-content: center;
+  }
+  .stat-value { font-family: var(--font-data); font-size: 28px; font-weight: 700; }
+  .stat-label { color: var(--muted); font-size: 11.5px; margin-top: 4px; }
+
+  .grid {
+    display: grid; grid-template-columns: 340px 1fr; gap: 18px;
+    margin-bottom: 20px;
+  }
+  @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px 22px;
+  }
+  .panel h2 {
+    font-size: 13px; font-weight: 500; color: var(--muted);
+    margin: 0 0 16px; display: flex; align-items: center; justify-content: space-between;
+  }
+  .panel h2 .count { color: var(--data); font-family: var(--font-data); }
+
+  .baseline-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 13px;
+  }
+  .baseline-row:last-of-type { border-bottom: none; }
+  .baseline-row dt { color: var(--muted); }
+  .baseline-row dd { margin: 0; font-family: var(--font-data); color: var(--text); }
+
+  .link-diagram {
+    display: flex; align-items: center; justify-content: center; gap: 14px;
+    margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--border);
+  }
+  .link-node {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    font-size: 11px; color: var(--muted);
+  }
+  .link-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .link-dot.gw { background: var(--data); }
+  .link-dot.victim { background: var(--safe); }
+  .link-wire { width: 60px; height: 1px; background: var(--border); position: relative; top: -14px; }
+
+  .feed-empty {
+    text-align: center; color: var(--muted); font-size: 13px; padding: 30px 10px;
+  }
+  .feed-row { border-bottom: 1px solid var(--border); }
+  .feed-row:last-child { border-bottom: none; }
+  .feed-summary {
+    display: flex; align-items: center; gap: 14px;
+    padding: 12px 4px; cursor: pointer;
+  }
+  .feed-ip { font-family: var(--font-data); color: var(--data); font-weight: 700; font-size: 14px; width: 120px; flex-shrink: 0; }
+  .feed-meta { flex: 1; min-width: 0; }
+  .feed-host { font-size: 12.5px; }
+  .feed-sub { font-size: 11px; color: var(--muted); font-family: var(--font-data); }
+  .feed-count { font-family: var(--font-data); font-size: 12px; color: var(--muted); text-align: right; flex-shrink: 0; white-space: nowrap; }
+  .feed-badge { font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 999px; flex-shrink: 0; }
+  .feed-badge.active { background: rgba(255,71,87,0.14); color: var(--danger); }
+  .feed-badge.blocked { background: rgba(61,220,132,0.14); color: var(--safe); }
+  .feed-btn {
+    padding: 6px 12px; border-radius: 7px; border: none; font-size: 11px; font-weight: 700;
+    cursor: pointer; flex-shrink: 0;
+  }
+  .feed-btn.block { background: var(--danger); color: #2b0a0d; }
+  .feed-btn.unblock { background: var(--panel-2); color: var(--text); border: 1px solid var(--border); }
+  .feed-chevron { color: var(--muted); font-size: 10px; transition: transform 0.15s; flex-shrink: 0; }
+  .feed-chevron.open { transform: rotate(90deg); }
+
+  .feed-detail { display: none; padding: 0 4px 14px 134px; }
+  .feed-detail.open { display: block; }
+  .feed-event { display: flex; gap: 12px; font-size: 11.5px; padding: 5px 0; color: var(--muted); font-family: var(--font-data); }
+  .feed-event .ev-ok { color: var(--safe); }
+  .feed-event .ev-fail { color: var(--danger); }
+
+  .ticker-wrap {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 0;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .ticker-track { display: inline-flex; animation: scroll-left 30s linear infinite; }
+  @media (prefers-reduced-motion: reduce) { .ticker-track { animation-duration: 90s; } }
+  @keyframes scroll-left {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+  .ticker-item { font-family: var(--font-data); font-size: 12px; color: var(--muted); padding: 0 28px; flex-shrink: 0; }
+  .ticker-item .t-ip { color: var(--data); }
+  .ticker-item .t-ok { color: var(--safe); }
+  .ticker-item .t-fail { color: var(--danger); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand"><span class="brand-mark">&#9670;</span>ARP GUARD<span class="os-badge" id="osBadge">-</span></div>
+  <nav class="nav">
+    <a href="/" class="navlink active">Dashboard</a>
+    <a href="/blocklist" class="navlink">Manage Blocks</a>
+    <a href="/network" class="navlink">Network Map</a>
+    <a href="/whitelist" class="navlink">Whitelist</a>
+    <a href="/logs" class="navlink">Full Logs</a>
+    <a href="/overview" class="navlink">Project Overview</a>
+  </nav>
+</div>
+
+<section class="hero">
+  <div class="hero-status">
+    <span class="pulse-ring" id="pulseRing"></span>
+    <div class="status-word" id="statusWord">LOADING</div>
+    <div class="status-sub" id="statusSub">Connecting to agent...</div>
+  </div>
+  <div class="hero-stats">
+    <div class="stat"><div class="stat-value" id="statTotal">0</div><div class="stat-label">Attempts logged</div></div>
+    <div class="stat"><div class="stat-value" id="statActive">0</div><div class="stat-label">Active threats</div></div>
+    <div class="stat"><div class="stat-value" id="statBlocked">0</div><div class="stat-label">Blocked</div></div>
+  </div>
+</section>
+
+<div class="grid">
+  <div class="panel">
+    <h2>Network baseline</h2>
+    <div class="baseline-row"><dt>Interface</dt><dd id="netInterface">-</dd></div>
+    <div class="baseline-row"><dt>Local IP</dt><dd id="netLocal">-</dd></div>
+    <div class="baseline-row"><dt>Gateway IP</dt><dd id="netGwIp">-</dd></div>
+    <div class="baseline-row"><dt>Trusted gateway MAC</dt><dd id="netGwMac">-</dd></div>
+    <div class="link-diagram">
+      <div class="link-node"><span class="link-dot gw"></span>Gateway</div>
+      <div class="link-wire"></div>
+      <div class="link-node"><span class="link-dot victim"></span>This endpoint</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Attacker feed <span class="count" id="feedCount"></span></h2>
+    <div id="attackerFeed">
+      <div class="feed-empty">No intrusions detected yet - monitoring is active.</div>
+    </div>
+  </div>
+</div>
+
+<div class="ticker-wrap">
+  <div class="ticker-track" id="tickerTrack">
+    <span class="ticker-item">Waiting for activity...</span>
+  </div>
+</div>
+
+<script>
+  var openRows = new Set();
+  var eventCache = {};
+  var lastStatus = null;
+
+  function macToId(mac) { return mac.split(":").join("-"); }
+
+  function playAlertBeep() {
+    try {
+      var ctx = new (window.AudioContext || window.webkitAudioContext)();
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+      osc.type = "square";
+      osc.frequency.value = 880;
+      gain.gain.value = 0.15;
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      setTimeout(function() { osc.stop(); ctx.close(); }, 220);
+    } catch (e) { /* audio not available, fail silently */ }
+  }
+
+  var STATUS_TEXT = {
+    "STARTING": ["LOADING", "", "Connecting to agent..."],
+    "DISCOVERING": ["ESTABLISHING BASELINE", "", "Recording trusted gateway identity..."],
+    "PROTECTED": ["PROTECTED", "", "Network state verified. No active threats."],
+    "ATTACK_DETECTED": ["UNDER ATTACK", "danger", "Forged network traffic detected."],
+    "RESTORING": ["RESTORING", "warn", "Reverting to trusted network state..."],
+    "ATTACK_BLOCKED": ["PROTECTED", "", "Attack blocked and state restored."]
+  };
+
+  function setStatus(status) {
+    var info = STATUS_TEXT[status] || [status, "", ""];
+    var word = document.getElementById("statusWord");
+    var sub = document.getElementById("statusSub");
+    var ring = document.getElementById("pulseRing");
+    word.textContent = info[0];
+    word.className = "status-word" + (info[1] ? " " + info[1] : "");
+    sub.textContent = info[2];
+    ring.className = "pulse-ring" + (info[1] ? " " + info[1] : "");
+  }
+
+  function refreshStatus() {
+    fetch("/api/status").then(function(res) { return res.json(); }).then(function(data) {
+      setStatus(data.status);
+      if (data.status === "ATTACK_DETECTED" && lastStatus !== "ATTACK_DETECTED") {
+        playAlertBeep();
+      }
+      lastStatus = data.status;
+      document.getElementById("osBadge").textContent = (data.os_name || "-") + (data.os_release ? " " + data.os_release : "");
+      document.getElementById("netInterface").textContent = data.interface || "-";
+      document.getElementById("netLocal").textContent = data.local_ip || "-";
+      document.getElementById("netGwIp").textContent = data.gateway_ip || "-";
+      document.getElementById("netGwMac").textContent = data.gateway_mac || "-";
+    }).catch(function() {
+      document.getElementById("statusSub").textContent = "Agent unreachable";
+    });
+  }
+
+  function renderEventRows(events) {
+    if (!events || events.length === 0) {
+      return '<div class="feed-event">No events yet.</div>';
+    }
+    return events.map(function(e) {
+      return '<div class="feed-event"><span>' + e.timestamp + '</span>' +
+        '<span>' + e.attack_type + '</span>' +
+        '<span class="' + (e.success ? 'ev-ok' : 'ev-fail') + '">' + (e.success ? 'OK' : 'FAILED') + '</span>' +
+        '<span>' + e.action + '</span></div>';
+    }).join("");
+  }
+
+  function loadEvents(mac) {
+    var id = macToId(mac);
+    return fetch("/api/attackers/" + id + "/events")
+      .then(function(res) { return res.json(); })
+      .then(function(events) {
+        eventCache[mac] = events;
+        var detail = document.getElementById("detail-" + id);
+        if (detail) detail.innerHTML = renderEventRows(events);
+      })
+      .catch(function() {});
+  }
+
+  function toggleRow(mac) {
+    var id = macToId(mac);
+    var detail = document.getElementById("detail-" + id);
+    var chevron = document.getElementById("chevron-" + id);
+    if (openRows.has(mac)) {
+      openRows.delete(mac);
+      detail.classList.remove("open");
+      chevron.classList.remove("open");
+      return;
+    }
+    openRows.add(mac);
+    detail.classList.add("open");
+    chevron.classList.add("open");
+    loadEvents(mac);
+  }
+
+  function toggleBlock(mac, currentlyBlocked, btn) {
+    var id = macToId(mac);
+    btn.disabled = true;
+    btn.textContent = "...";
+    var endpoint = currentlyBlocked ? "unblock" : "block";
+    fetch("/api/attackers/" + id + "/" + endpoint, { method: "POST" })
+      .then(function() { return refreshAttackers(); })
+      .then(function() { if (openRows.has(mac)) return loadEvents(mac); })
+      .finally(function() { btn.disabled = false; });
+  }
+
+  function renderFeedRow(a) {
+    var id = macToId(a.mac);
+    var isOpen = openRows.has(a.mac);
+    var cached = eventCache[a.mac];
+    var subLabel = a.hostname !== "Unknown" ? a.hostname : a.mac;
+    var countLabel = a.blocked && a.blocked_retry_count > 0
+      ? "&times;" + a.attack_count + " <span style=\"color:var(--muted); font-size:10px;\">(+" + a.blocked_retry_count + " rejected)</span>"
+      : "&times;" + a.attack_count;
+
+    return (
+      '<div class="feed-row">' +
+        '<div class="feed-summary" onclick="toggleRow(\'' + a.mac + '\')">' +
+          '<span class="feed-ip">' + a.ip + '</span>' +
+          '<span class="feed-meta"><div class="feed-host">' + subLabel + '</div>' +
+            '<div class="feed-sub">' + a.mac + '</div></span>' +
+          '<span class="feed-count">' + countLabel + '</span>' +
+          '<span class="feed-badge ' + (a.blocked ? 'blocked' : 'active') + '">' + (a.blocked ? 'BLOCKED' : 'ACTIVE') + '</span>' +
+          '<button class="feed-btn ' + (a.blocked ? 'unblock' : 'block') + '" ' +
+            'onclick="event.stopPropagation(); toggleBlock(\'' + a.mac + '\', ' + a.blocked + ', this)">' +
+            (a.blocked ? 'Unblock' : 'Block') +
+          '</button>' +
+          '<span class="feed-chevron ' + (isOpen ? 'open' : '') + '" id="chevron-' + id + '">&#9654;</span>' +
+        '</div>' +
+        '<div class="feed-detail ' + (isOpen ? 'open' : '') + '" id="detail-' + id + '">' +
+          renderEventRows(cached) +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  function refreshAttackers() {
+    return fetch("/api/attackers").then(function(res) { return res.json(); }).then(function(attackers) {
+      var feed = document.getElementById("attackerFeed");
+      var countEl = document.getElementById("feedCount");
+
+      var total = 0, active = 0, blocked = 0;
+      attackers.forEach(function(a) {
+        total += a.attack_count;
+        if (a.blocked) blocked++; else active++;
+      });
+      document.getElementById("statTotal").textContent = total;
+      document.getElementById("statActive").textContent = active;
+      document.getElementById("statBlocked").textContent = blocked;
+
+      if (attackers.length === 0) {
+        feed.innerHTML = '<div class="feed-empty">No intrusions detected yet - monitoring is active.</div>';
+        countEl.textContent = "";
+        return;
+      }
+
+      countEl.textContent = attackers.length;
+      feed.innerHTML = attackers.map(renderFeedRow).join("");
+
+      var promises = [];
+      openRows.forEach(function(mac) { promises.push(loadEvents(mac)); });
+      return Promise.all(promises);
+    }).catch(function() {});
+  }
+
+  function refreshTicker() {
+    fetch("/api/logs").then(function(res) { return res.json(); }).then(function(logs) {
+      var track = document.getElementById("tickerTrack");
+      if (!logs || logs.length === 0) {
+        track.innerHTML = '<span class="ticker-item">No activity yet - monitoring is active.</span>';
+        return;
+      }
+      var recent = logs.slice(0, 12);
+      var itemsHtml = recent.map(function(e) {
+        return '<span class="ticker-item">' + e.timestamp + ' &middot; <span class="t-ip">' + e.attacker_ip +
+          '</span> &middot; ' + e.attack_type + ' &middot; ' +
+          '<span class="' + (e.success ? 't-ok' : 't-fail') + '">' + e.action + '</span></span>';
+      }).join("");
+      track.innerHTML = itemsHtml + itemsHtml;
+    }).catch(function() {});
+  }
+
+  function tick() {
+    refreshStatus();
+    refreshAttackers();
+  }
+
+  tick();
+  refreshTicker();
+  setInterval(tick, 1500);
+  setInterval(refreshTicker, 4000);
+</script>
+
+</body>
+</html>

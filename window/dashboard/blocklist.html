@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ARP Guard - Manage Blocks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0e14; --panel: #11161f; --panel-2: #0d1219; --border: #1e2530;
+    --text: #e8eaed; --muted: #6b7685;
+    --safe: #3ddc84; --danger: #ff4757; --warn: #ffa502; --data: #4fc3f7;
+    --font-ui: "Space Grotesk", sans-serif; --font-data: "JetBrains Mono", monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text); font-family: var(--font-ui);
+    padding: 20px 28px 50px; max-width: 1180px; margin: 0 auto;
+  }
+  a { color: inherit; }
+  :focus-visible { outline: 2px solid var(--data); outline-offset: 2px; }
+
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+    padding-bottom: 16px; margin-bottom: 24px; border-bottom: 1px solid var(--border);
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 700; letter-spacing: 0.5px; }
+  .brand-mark { color: var(--safe); font-size: 20px; }
+  .os-badge { font-size: 11px; font-family: var(--font-data); color: var(--muted); padding: 4px 10px; border: 1px solid var(--border); border-radius: 999px; margin-left: 6px; }
+  .nav { display: flex; gap: 4px; flex-wrap: wrap; }
+  .navlink { padding: 7px 13px; border-radius: 7px; text-decoration: none; font-size: 12.5px; font-weight: 500; color: var(--muted); }
+  .navlink:hover { background: var(--panel); color: var(--text); }
+  .navlink.active { background: rgba(61,220,132,0.12); color: var(--safe); }
+
+  .page-title { font-size: 15px; color: var(--muted); margin-bottom: 18px; }
+
+  .policy-banner {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+    padding: 18px 24px; margin-bottom: 20px;
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+  }
+  .policy-banner .title { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
+  .policy-banner .desc { font-size: 13.5px; }
+  .policy-badge { padding: 6px 14px; border-radius: 999px; font-size: 11.5px; font-weight: 700; font-family: var(--font-data); }
+  .policy-badge.on { background: rgba(61,220,132,0.14); color: var(--safe); }
+  .policy-badge.off { background: rgba(255,71,87,0.14); color: var(--danger); }
+
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    text-align: left; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px;
+    padding: 14px 16px; border-bottom: 1px solid var(--border); font-weight: 500;
+  }
+  tbody td { padding: 14px 16px; font-size: 13px; border-bottom: 1px solid var(--border); font-family: var(--font-data); }
+  tbody tr:last-child td { border-bottom: none; }
+
+  .badge { display: inline-block; padding: 4px 12px; border-radius: 999px; font-size: 10.5px; font-weight: 700; font-family: var(--font-ui); }
+  .badge.active { background: rgba(255,71,87,0.14); color: var(--danger); }
+  .badge.blocked { background: rgba(61,220,132,0.14); color: var(--safe); }
+  .badge.auto { background: rgba(79,195,247,0.14); color: var(--data); margin-left: 4px; }
+
+  .block-btn { padding: 8px 14px; border-radius: 7px; border: none; font-size: 12px; font-weight: 700; cursor: pointer; font-family: var(--font-ui); }
+  .block-btn.block { background: var(--danger); color: #2b0a0d; }
+  .block-btn.unblock { background: var(--panel-2); color: var(--text); border: 1px solid var(--border); }
+  .block-btn:disabled { opacity: 0.5; cursor: wait; }
+
+  .empty-state { text-align: center; color: var(--muted); padding: 40px; font-size: 13px; font-family: var(--font-ui); }
+
+  .progress-track { width: 100%; height: 5px; background: var(--panel-2); border-radius: 3px; overflow: hidden; margin-top: 6px; }
+  .progress-fill { height: 100%; background: var(--warn); transition: width 0.3s; }
+  .progress-fill.done { background: var(--danger); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand"><span class="brand-mark">&#9670;</span>ARP GUARD<span class="os-badge" id="osBadge">-</span></div>
+  <nav class="nav">
+    <a href="/" class="navlink">Dashboard</a>
+    <a href="/blocklist" class="navlink active">Manage Blocks</a>
+    <a href="/network" class="navlink">Network Map</a>
+    <a href="/whitelist" class="navlink">Whitelist</a>
+    <a href="/logs" class="navlink">Full Logs</a>
+    <a href="/overview" class="navlink">Project Overview</a>
+  </nav>
+</div>
+
+<div class="policy-banner" id="policyBanner">
+  <div>
+    <div class="title">Auto-block policy</div>
+    <div class="desc" id="policyDesc">Loading...</div>
+  </div>
+  <span class="policy-badge" id="policyBadge">-</span>
+</div>
+
+<div class="panel">
+  <table>
+    <thead>
+      <tr>
+        <th>Attacker IP</th><th>Hostname</th><th>MAC address</th>
+        <th>Attempts</th><th>Attack duration</th><th>Status</th><th>Action</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody">
+      <tr><td colspan="7" class="empty-state">No attackers detected yet.</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<script>
+  var autoBlockThreshold = 90;
+
+  function macToId(mac) { return mac.split(":").join("-"); }
+
+  function loadPolicy() {
+    fetch("/api/policy").then(function(res) { return res.json(); }).then(function(p) {
+      autoBlockThreshold = p.auto_block_after_seconds;
+      var badge = document.getElementById("policyBadge");
+      var desc = document.getElementById("policyDesc");
+      if (p.auto_block_enabled) {
+        badge.textContent = "ENABLED";
+        badge.className = "policy-badge on";
+        desc.textContent = "Attackers are automatically blocked after " +
+          Math.round(p.auto_block_after_seconds / 60 * 10) / 10 + " minute(s) of continuous attack.";
+      } else {
+        badge.textContent = "DISABLED";
+        badge.className = "policy-badge off";
+        desc.textContent = "Auto-block is off. All blocking is manual.";
+      }
+    });
+  }
+
+  function formatDuration(seconds) {
+    if (seconds < 60) return Math.round(seconds) + "s";
+    var m = Math.floor(seconds / 60);
+    var s = Math.round(seconds % 60);
+    return m + "m " + s + "s";
+  }
+
+  function toggleBlock(mac, currentlyBlocked, btn) {
+    var id = macToId(mac);
+    btn.disabled = true;
+    btn.textContent = "...";
+    var endpoint = currentlyBlocked ? "unblock" : "block";
+    fetch("/api/attackers/" + id + "/" + endpoint, { method: "POST" })
+      .then(function() { return refresh(); })
+      .finally(function() { btn.disabled = false; });
+  }
+
+  function renderRow(a) {
+    var progressPct = Math.min(100, (a.duration_seconds / autoBlockThreshold) * 100);
+    var progressHtml = "";
+    if (!a.blocked) {
+      progressHtml = '<div class="progress-track"><div class="progress-fill ' +
+        (progressPct >= 100 ? "done" : "") + '" style="width:' + progressPct + '%"></div></div>';
+    }
+
+    var statusBadge = a.blocked
+      ? '<span class="badge blocked">BLOCKED</span><span class="badge auto">' + (a.blocked_by === "auto" ? "AUTO" : "MANUAL") + '</span>'
+      : '<span class="badge active">ACTIVE</span>';
+
+    var attemptsCell = a.blocked && a.blocked_retry_count > 0
+      ? a.attempts_before_block + ' <span style="color:var(--muted); font-size:10.5px;">(+' + a.blocked_retry_count + ' rejected)</span>'
+      : a.attack_count;
+
+    return (
+      '<tr>' +
+        '<td style="color:var(--data); font-weight:700;">' + a.ip + '</td>' +
+        '<td style="font-family:var(--font-ui);">' + a.hostname + '</td>' +
+        '<td>' + a.mac + '</td>' +
+        '<td>' + attemptsCell + '</td>' +
+        '<td>' + formatDuration(a.duration_seconds) + progressHtml + '</td>' +
+        '<td>' + statusBadge + '</td>' +
+        '<td><button class="block-btn ' + (a.blocked ? "unblock" : "block") + '" ' +
+          'onclick="toggleBlock(\'' + a.mac + '\', ' + a.blocked + ', this)">' +
+          (a.blocked ? "Unblock" : "Block now") +
+        '</button></td>' +
+      '</tr>'
+    );
+  }
+
+  function refresh() {
+    return fetch("/api/attackers").then(function(res) { return res.json(); }).then(function(attackers) {
+      var body = document.getElementById("tableBody");
+      if (attackers.length === 0) {
+        body.innerHTML = '<tr><td colspan="7" class="empty-state">No attackers detected yet.</td></tr>';
+        return;
+      }
+      body.innerHTML = attackers.map(renderRow).join("");
+    }).catch(function() {});
+  }
+
+  loadPolicy();
+  refresh();
+  setInterval(refresh, 1500);
+  setInterval(loadPolicy, 10000);
+</script>
+
+<script>
+  fetch("/api/status").then(function(r){return r.json();}).then(function(d){
+    var b = document.getElementById("osBadge");
+    if (b) b.textContent = (d.os_name || "-") + (d.os_release ? " " + d.os_release : "");
+  }).catch(function(){});
+</script>
+</body>
+</html>

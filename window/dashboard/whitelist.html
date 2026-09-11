@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ARP Guard - Whitelist</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0e14; --panel: #11161f; --panel-2: #0d1219; --border: #1e2530;
+    --text: #e8eaed; --muted: #6b7685;
+    --safe: #3ddc84; --danger: #ff4757; --warn: #ffa502; --data: #4fc3f7;
+    --font-ui: "Space Grotesk", sans-serif; --font-data: "JetBrains Mono", monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text); font-family: var(--font-ui);
+    padding: 20px 28px 50px; max-width: 1180px; margin: 0 auto;
+  }
+  a { color: inherit; }
+  :focus-visible { outline: 2px solid var(--data); outline-offset: 2px; }
+
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+    padding-bottom: 16px; margin-bottom: 24px; border-bottom: 1px solid var(--border);
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 700; letter-spacing: 0.5px; }
+  .brand-mark { color: var(--safe); font-size: 20px; }
+  .os-badge { font-size: 11px; font-family: var(--font-data); color: var(--muted); padding: 4px 10px; border: 1px solid var(--border); border-radius: 999px; margin-left: 6px; }
+  .nav { display: flex; gap: 4px; flex-wrap: wrap; }
+  .navlink { padding: 7px 13px; border-radius: 7px; text-decoration: none; font-size: 12.5px; font-weight: 500; color: var(--muted); }
+  .navlink:hover { background: var(--panel); color: var(--text); }
+  .navlink.active { background: rgba(61,220,132,0.12); color: var(--safe); }
+
+  .note {
+    background: var(--panel); border: 1px solid var(--border); border-left: 3px solid var(--safe);
+    border-radius: 12px; padding: 16px 22px; margin-bottom: 22px; font-size: 13px; color: var(--muted); line-height: 1.65;
+  }
+
+  .add-form {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+    padding: 20px 22px; margin-bottom: 22px; display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap;
+  }
+  .field { display: flex; flex-direction: column; gap: 7px; }
+  .field label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; }
+  .field input {
+    background: var(--panel-2); border: 1px solid var(--border); color: var(--text);
+    padding: 10px 13px; border-radius: 8px; font-size: 13px; font-family: var(--font-data); min-width: 210px;
+  }
+  .field input:focus { outline: none; border-color: var(--safe); }
+  .add-btn { padding: 11px 20px; border-radius: 8px; border: none; background: var(--safe); color: #04241a; font-size: 13px; font-weight: 700; cursor: pointer; font-family: var(--font-ui); }
+  .add-btn:disabled { opacity: 0.5; cursor: wait; }
+  .error-text { color: var(--danger); font-size: 12px; margin-top: -12px; margin-bottom: 16px; }
+
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; }
+  thead th { text-align: left; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; padding: 13px 16px; border-bottom: 1px solid var(--border); font-weight: 500; }
+  tbody td { padding: 13px 16px; font-size: 13px; border-bottom: 1px solid var(--border); font-family: var(--font-data); }
+  tbody tr:last-child td { border-bottom: none; }
+
+  .remove-btn { padding: 7px 13px; border-radius: 7px; border: none; background: rgba(255,71,87,0.14); color: var(--danger); font-size: 11px; font-weight: 700; cursor: pointer; font-family: var(--font-ui); }
+  .empty-state { text-align: center; color: var(--muted); padding: 40px; font-size: 13px; font-family: var(--font-ui); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand"><span class="brand-mark">&#9670;</span>ARP GUARD<span class="os-badge" id="osBadge">-</span></div>
+  <nav class="nav">
+    <a href="/" class="navlink">Dashboard</a>
+    <a href="/blocklist" class="navlink">Manage Blocks</a>
+    <a href="/network" class="navlink">Network Map</a>
+    <a href="/whitelist" class="navlink active">Whitelist</a>
+    <a href="/logs" class="navlink">Full Logs</a>
+    <a href="/overview" class="navlink">Project Overview</a>
+  </nav>
+</div>
+
+<div class="note">
+  Devices on this list are never flagged as attackers, even if their traffic looks like ARP or DNS spoofing.
+  Use this for known legitimate cases - e.g. a router replacement, a second access point, or a trusted multi-homed device on the lab network.
+</div>
+
+<div class="add-form">
+  <div class="field"><label>MAC address</label><input type="text" id="macInput" placeholder="AA:BB:CC:DD:EE:FF"></div>
+  <div class="field"><label>Label (optional)</label><input type="text" id="labelInput" placeholder="e.g. Lab router 2"></div>
+  <button class="add-btn" id="addBtn" onclick="addEntry()">Add to whitelist</button>
+</div>
+<div id="formError" class="error-text" style="display:none;"></div>
+
+<div class="panel">
+  <table>
+    <thead><tr><th>MAC address</th><th>Label</th><th>Added</th><th></th></tr></thead>
+    <tbody id="tableBody">
+      <tr><td colspan="4" class="empty-state">No trusted devices added yet.</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<script>
+  var MAC_PATTERN = /^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$/;
+
+  function macToId(mac) { return mac.split(":").join("-"); }
+
+  function showError(msg) {
+    var el = document.getElementById("formError");
+    el.textContent = msg;
+    el.style.display = "block";
+  }
+  function clearError() { document.getElementById("formError").style.display = "none"; }
+
+  function addEntry() {
+    var mac = document.getElementById("macInput").value.trim();
+    var label = document.getElementById("labelInput").value.trim();
+    clearError();
+
+    if (!mac) { showError("Enter a MAC address first."); return; }
+    if (!MAC_PATTERN.test(mac)) { showError("MAC address must look like AA:BB:CC:DD:EE:FF"); return; }
+
+    var btn = document.getElementById("addBtn");
+    btn.disabled = true;
+    btn.textContent = "Adding...";
+
+    fetch("/api/whitelist", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mac: mac, label: label }),
+    })
+      .then(function(res) {
+        if (!res.ok) throw new Error("Request failed");
+        document.getElementById("macInput").value = "";
+        document.getElementById("labelInput").value = "";
+        return refresh();
+      })
+      .catch(function() { showError("Could not add entry - is the agent running?"); })
+      .finally(function() { btn.disabled = false; btn.textContent = "Add to whitelist"; });
+  }
+
+  function removeEntry(mac) {
+    var id = macToId(mac);
+    fetch("/api/whitelist/" + id, { method: "DELETE" }).then(refresh);
+  }
+
+  function renderRow(entry) {
+    return (
+      '<tr>' +
+        '<td>' + entry.mac + '</td>' +
+        '<td style="font-family:var(--font-ui);">' + (entry.label || '-') + '</td>' +
+        '<td>' + entry.added_at + '</td>' +
+        '<td><button class="remove-btn" onclick="removeEntry(\'' + entry.mac + '\')">Remove</button></td>' +
+      '</tr>'
+    );
+  }
+
+  function refresh() {
+    return fetch("/api/whitelist").then(function(res) { return res.json(); }).then(function(entries) {
+      var body = document.getElementById("tableBody");
+      if (entries.length === 0) {
+        body.innerHTML = '<tr><td colspan="4" class="empty-state">No trusted devices added yet.</td></tr>';
+        return;
+      }
+      body.innerHTML = entries.map(renderRow).join("");
+    }).catch(function() {});
+  }
+
+  refresh();
+</script>
+
+<script>
+  fetch("/api/status").then(function(r){return r.json();}).then(function(d){
+    var b = document.getElementById("osBadge");
+    if (b) b.textContent = (d.os_name || "-") + (d.os_release ? " " + d.os_release : "");
+  }).catch(function(){});
+</script>
+</body>
+</html>

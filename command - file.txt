@@ -1,0 +1,44 @@
+~/Desktop/wifi/
+├── main.py
+├── requirements.txt
+├── arp_guard.db                    ← created automatically on first run
+│
+├── discovery/
+│   ├── gateway.py
+│   └── dns_config.py                ← NEW (trusted DNS baseline)
+│
+├── detectors/
+│   ├── arp_detector.py               (now checks whitelist)
+│   └── dns_detector.py               ← NEW
+│
+├── protection/
+│   ├── arp_protection.py
+│   └── dns_protection.py             ← NEW (cache flush)
+│
+├── engine/
+│   ├── state.py
+│   ├── attackers.py                   (now attack-type agnostic, DB write-through)
+│   ├── policy.py
+│   ├── runtime.py
+│   ├── db.py                          ← NEW (SQLite)
+│   └── whitelist.py                   ← NEW
+│
+├── api/
+│   └── server.py                     (whitelist + export endpoints, 2 new pages)
+│
+├── utils/
+│   ├── block.py
+│   ├── hostname.py
+│   └── network_scan.py
+│
+└── dashboard/
+    ├── index.html                     (sound alert added)
+    ├── blocklist.html
+    ├── logs.html                      (Export Report button)
+    ├── overview.html
+    ├── network.html                   ← NEW
+    └── whitelist.html                 ← NEW
+
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt

@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ARP Guard - Overview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0e14; --panel: #11161f; --panel-2: #0d1219; --border: #1e2530;
+    --text: #e8eaed; --muted: #6b7685;
+    --safe: #3ddc84; --danger: #ff4757; --warn: #ffa502; --data: #4fc3f7;
+    --font-ui: "Space Grotesk", sans-serif; --font-data: "JetBrains Mono", monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text); font-family: var(--font-ui);
+    padding: 20px 28px 50px; max-width: 1180px; margin: 0 auto;
+  }
+  a { color: inherit; }
+  :focus-visible { outline: 2px solid var(--data); outline-offset: 2px; }
+
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+    padding-bottom: 16px; margin-bottom: 24px; border-bottom: 1px solid var(--border);
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 700; letter-spacing: 0.5px; }
+  .brand-mark { color: var(--safe); font-size: 20px; }
+  .os-badge { font-size: 11px; font-family: var(--font-data); color: var(--muted); padding: 4px 10px; border: 1px solid var(--border); border-radius: 999px; margin-left: 6px; }
+  .nav { display: flex; gap: 4px; flex-wrap: wrap; }
+  .navlink { padding: 7px 13px; border-radius: 7px; text-decoration: none; font-size: 12.5px; font-weight: 500; color: var(--muted); }
+  .navlink:hover { background: var(--panel); color: var(--text); }
+  .navlink.active { background: rgba(61,220,132,0.12); color: var(--safe); }
+
+  .hero {
+    background: linear-gradient(135deg, #11161f, #0a0e14);
+    border: 1px solid var(--border); border-radius: 16px; padding: 40px 44px; margin-bottom: 26px;
+  }
+  .hero .eyebrow { color: var(--safe); font-size: 11.5px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 12px; font-family: var(--font-data); }
+  .hero h2 { font-size: 32px; margin: 0 0 14px; font-weight: 700; }
+  .hero p { color: var(--muted); font-size: 15px; max-width: 640px; line-height: 1.65; margin: 0; }
+
+  .section { margin-bottom: 30px; }
+  .section h3 { font-size: 12.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 14px; font-weight: 500; }
+
+  .objective-box {
+    background: var(--panel); border: 1px solid var(--border); border-left: 3px solid var(--safe);
+    border-radius: 12px; padding: 22px 26px; font-size: 15px; line-height: 1.65;
+  }
+  .objective-box b { color: var(--safe); }
+
+  .concept-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  @media (max-width: 760px) { .concept-grid { grid-template-columns: 1fr; } }
+  .concept-card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; }
+  .concept-card .term { font-size: 13.5px; font-weight: 700; color: var(--data); margin-bottom: 6px; font-family: var(--font-data); }
+  .concept-card .def { font-size: 12.5px; color: var(--muted); line-height: 1.55; }
+
+  .flow { display: flex; align-items: center; flex-wrap: wrap; background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 26px; }
+  .flow-step { display: flex; flex-direction: column; align-items: center; gap: 8px; flex: 1; min-width: 100px; text-align: center; }
+  .flow-step .icon { width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--panel-2); border: 1px solid var(--border); font-size: 17px; }
+  .flow-step .label { font-size: 12px; font-weight: 700; }
+  .flow-arrow { color: var(--muted); font-size: 16px; padding: 0 6px; }
+
+  .stack-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { background: var(--panel); border: 1px solid var(--border); padding: 8px 16px; border-radius: 999px; font-size: 12.5px; font-family: var(--font-data); }
+
+  .status-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  @media (max-width: 600px) { .status-grid { grid-template-columns: 1fr; } }
+  .status-item { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; }
+  .status-item .name { font-size: 13px; }
+  .status-item .tag { font-size: 10px; font-weight: 700; padding: 4px 10px; border-radius: 999px; font-family: var(--font-data); }
+  .tag.done { background: rgba(61,220,132,0.14); color: var(--safe); }
+  .tag.planned { background: rgba(255,165,2,0.14); color: var(--warn); }
+
+  .limits {
+    background: var(--panel); border: 1px solid var(--border); border-left: 3px solid var(--warn);
+    border-radius: 12px; padding: 20px 24px; font-size: 13px; color: var(--muted); line-height: 1.8;
+  }
+  .limits b { color: var(--text); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand"><span class="brand-mark">&#9670;</span>ARP GUARD<span class="os-badge" id="osBadge">-</span></div>
+  <nav class="nav">
+    <a href="/" class="navlink">Dashboard</a>
+    <a href="/blocklist" class="navlink">Manage Blocks</a>
+    <a href="/network" class="navlink">Network Map</a>
+    <a href="/whitelist" class="navlink">Whitelist</a>
+    <a href="/logs" class="navlink">Full Logs</a>
+    <a href="/overview" class="navlink active">Project Overview</a>
+  </nav>
+</div>
+
+<div class="hero">
+  <div class="eyebrow">Innovation Day &middot; Host-based endpoint security</div>
+  <h2>ARP Guard</h2>
+  <p>
+    A host-based defense agent that detects ARP and DNS spoofing attacks in real time
+    and automatically restores the victim machine's correct network state -
+    turning a passive target into an active, self-healing endpoint.
+  </p>
+</div>
+
+<div class="section">
+  <h3>Core objective</h3>
+  <div class="objective-box">
+    To build an endpoint agent that <b>detects spoofing the moment it happens</b>,
+    <b>automatically restores</b> the correct network state without human
+    intervention, and <b>shows the entire fight live</b> - with attacker
+    attribution, blocking, and full audit logs.
+  </div>
+</div>
+
+<div class="section">
+  <h3>Key concepts</h3>
+  <div class="concept-grid">
+    <div class="concept-card"><div class="term">ARP</div><div class="def">The protocol devices use to find "who owns this IP" on a local network - has no built-in authentication.</div></div>
+    <div class="concept-card"><div class="term">ARP spoofing</div><div class="def">An attacker sends forged replies claiming to be the router, redirecting the victim's traffic through them.</div></div>
+    <div class="concept-card"><div class="term">Trusted baseline</div><div class="def">The router's real identity, verified once at clean startup - never re-derived from traffic that could be poisoned.</div></div>
+    <div class="concept-card"><div class="term">DNS spoofing</div><div class="def">An attacker injects forged DNS responses from an untrusted source, redirecting lookups to malicious destinations.</div></div>
+    <div class="concept-card"><div class="term">Auto-block</div><div class="def">If an attacker keeps spoofing continuously past a set duration, they're firewalled automatically - no click needed.</div></div>
+    <div class="concept-card"><div class="term">Per-attacker tracking</div><div class="def">Every attacker is tracked by MAC across both attack types, so one attacker's activity never fragments across logs.</div></div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Defense cycle</h3>
+  <div class="flow">
+    <div class="flow-step"><div class="icon">&#128270;</div><div class="label">Detect</div></div>
+    <div class="flow-arrow">&#8594;</div>
+    <div class="flow-step"><div class="icon">&#9989;</div><div class="label">Verify</div></div>
+    <div class="flow-arrow">&#8594;</div>
+    <div class="flow-step"><div class="icon">&#128737;</div><div class="label">Restore</div></div>
+    <div class="flow-arrow">&#8594;</div>
+    <div class="flow-step"><div class="icon">&#128272;</div><div class="label">Block</div></div>
+    <div class="flow-arrow">&#8594;</div>
+    <div class="flow-step"><div class="icon">&#128203;</div><div class="label">Log</div></div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Technology stack</h3>
+  <div class="stack-chips">
+    <span class="chip">Python 3</span><span class="chip">Scapy</span><span class="chip">FastAPI</span>
+    <span class="chip">Uvicorn</span><span class="chip">SQLite</span><span class="chip">arptables</span>
+    <span class="chip">iptables</span><span class="chip">HTML / CSS / JS</span>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Module status</h3>
+  <div class="status-grid">
+    <div class="status-item"><span class="name">ARP detection &amp; restoration</span><span class="tag done">DONE</span></div>
+    <div class="status-item"><span class="name">DNS spoofing detection</span><span class="tag done">DONE</span></div>
+    <div class="status-item"><span class="name">Manual + auto block</span><span class="tag done">DONE</span></div>
+    <div class="status-item"><span class="name">Whitelist &amp; SQLite persistence</span><span class="tag done">DONE</span></div>
+    <div class="status-item"><span class="name">Network map &amp; live dashboard</span><span class="tag done">DONE</span></div>
+    <div class="status-item"><span class="name">WiFi deauth detection</span><span class="tag planned">PLANNED (hardware-limited)</span></div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Honest limitations</h3>
+  <div class="limits">
+    Attacker <b>IP attribution</b> is heuristic for ARP - the forged packet only reveals the attacker's MAC, so their IP is learned via passive traffic and active subnet scanning.
+    <br>Attacker <b>hostname</b> resolution is best-effort (reverse DNS / NetBIOS) and may show "Unknown" depending on the network.
+    <br><b>Deauthentication detection</b> requires monitor-mode-capable WiFi hardware not available in this build.
+    <br>This protects the <b>single endpoint</b> it runs on, not the whole network.
+  </div>
+</div>
+
+<script>
+  fetch("/api/status").then(function(r){return r.json();}).then(function(d){
+    var b = document.getElementById("osBadge");
+    if (b) b.textContent = (d.os_name || "-") + (d.os_release ? " " + d.os_release : "");
+  }).catch(function(){});
+</script>
+</body>
+</html>

@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ARP Guard - Full Logs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0e14; --panel: #11161f; --panel-2: #0d1219; --border: #1e2530;
+    --text: #e8eaed; --muted: #6b7685;
+    --safe: #3ddc84; --danger: #ff4757; --warn: #ffa502; --data: #4fc3f7;
+    --font-ui: "Space Grotesk", sans-serif; --font-data: "JetBrains Mono", monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text); font-family: var(--font-ui);
+    padding: 20px 28px 50px; max-width: 1180px; margin: 0 auto;
+  }
+  a { color: inherit; }
+  :focus-visible { outline: 2px solid var(--data); outline-offset: 2px; }
+
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+    padding-bottom: 16px; margin-bottom: 24px; border-bottom: 1px solid var(--border);
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 700; letter-spacing: 0.5px; }
+  .brand-mark { color: var(--safe); font-size: 20px; }
+  .os-badge { font-size: 11px; font-family: var(--font-data); color: var(--muted); padding: 4px 10px; border: 1px solid var(--border); border-radius: 999px; margin-left: 6px; }
+  .nav { display: flex; gap: 4px; flex-wrap: wrap; }
+  .navlink { padding: 7px 13px; border-radius: 7px; text-decoration: none; font-size: 12.5px; font-weight: 500; color: var(--muted); }
+  .navlink:hover { background: var(--panel); color: var(--text); }
+  .navlink.active { background: rgba(61,220,132,0.12); color: var(--safe); }
+
+  .toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; gap: 12px; flex-wrap: wrap; }
+  .search-input {
+    flex: 1; max-width: 340px; background: var(--panel); border: 1px solid var(--border);
+    color: var(--text); padding: 11px 14px; border-radius: 9px; font-size: 13px; font-family: var(--font-data);
+  }
+  .search-input:focus { outline: none; border-color: var(--data); }
+  .log-count { color: var(--muted); font-size: 12.5px; font-family: var(--font-data); }
+  .export-btn {
+    padding: 11px 18px; border-radius: 9px; background: var(--safe); color: #04241a;
+    font-size: 12.5px; font-weight: 700; text-decoration: none; white-space: nowrap; font-family: var(--font-ui);
+  }
+  .export-btn:hover { opacity: 0.9; }
+
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    text-align: left; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px;
+    padding: 13px 16px; border-bottom: 1px solid var(--border); font-weight: 500;
+  }
+  tbody td { padding: 11px 16px; font-size: 12.5px; border-bottom: 1px solid var(--border); font-family: var(--font-data); }
+  tbody tr:last-child td { border-bottom: none; }
+
+  .type-pill { padding: 3px 10px; border-radius: 999px; font-size: 10px; font-weight: 700; font-family: var(--font-ui); display: inline-block; }
+  .type-pill.arp { background: rgba(255,71,87,0.14); color: var(--danger); }
+  .type-pill.dns { background: rgba(255,165,2,0.14); color: var(--warn); }
+  .type-pill.block { background: rgba(79,195,247,0.14); color: var(--data); }
+
+  .result-ok { color: var(--safe); }
+  .result-fail { color: var(--danger); }
+
+  .empty-state { text-align: center; color: var(--muted); padding: 40px; font-size: 13px; font-family: var(--font-ui); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand"><span class="brand-mark">&#9670;</span>ARP GUARD<span class="os-badge" id="osBadge">-</span></div>
+  <nav class="nav">
+    <a href="/" class="navlink">Dashboard</a>
+    <a href="/blocklist" class="navlink">Manage Blocks</a>
+    <a href="/network" class="navlink">Network Map</a>
+    <a href="/whitelist" class="navlink">Whitelist</a>
+    <a href="/logs" class="navlink active">Full Logs</a>
+    <a href="/overview" class="navlink">Project Overview</a>
+  </nav>
+</div>
+
+<div class="toolbar">
+  <input type="text" class="search-input" id="searchBox" placeholder="Filter by IP, MAC, or hostname...">
+  <span class="log-count" id="logCount"></span>
+  <a href="/api/export/report" class="export-btn">Export report</a>
+</div>
+
+<div class="panel">
+  <table>
+    <thead>
+      <tr><th>Time</th><th>Attacker IP</th><th>Hostname</th><th>MAC</th><th>Event</th><th>Action</th><th>Result</th></tr>
+    </thead>
+    <tbody id="logBody">
+      <tr><td colspan="7" class="empty-state">No events yet.</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<script>
+  var allLogs = [];
+
+  function pillClass(type) {
+    if (type.indexOf("Block") !== -1) return "block";
+    if (type.indexOf("DNS") !== -1) return "dns";
+    return "arp";
+  }
+
+  function renderLogs(logs) {
+    var body = document.getElementById("logBody");
+    var countEl = document.getElementById("logCount");
+
+    if (logs.length === 0) {
+      body.innerHTML = '<tr><td colspan="7" class="empty-state">No matching events.</td></tr>';
+      countEl.textContent = "";
+      return;
+    }
+    countEl.textContent = logs.length + " event(s)";
+
+    body.innerHTML = logs.map(function(e) {
+      return (
+        '<tr>' +
+          '<td>' + e.timestamp + '</td>' +
+          '<td style="color:var(--data); font-weight:700;">' + e.attacker_ip + '</td>' +
+          '<td style="font-family:var(--font-ui);">' + e.attacker_hostname + '</td>' +
+          '<td>' + e.attacker_mac + '</td>' +
+          '<td><span class="type-pill ' + pillClass(e.attack_type) + '">' + e.attack_type + '</span></td>' +
+          '<td>' + e.action + '</td>' +
+          '<td class="' + (e.success ? "result-ok" : "result-fail") + '">' + (e.success ? "OK" : "FAILED") + '</td>' +
+        '</tr>'
+      );
+    }).join("");
+  }
+
+  function applyFilter() {
+    var q = document.getElementById("searchBox").value.trim().toLowerCase();
+    if (!q) { renderLogs(allLogs); return; }
+    var filtered = allLogs.filter(function(e) {
+      return (
+        (e.attacker_ip || "").toLowerCase().indexOf(q) !== -1 ||
+        (e.attacker_mac || "").toLowerCase().indexOf(q) !== -1 ||
+        (e.attacker_hostname || "").toLowerCase().indexOf(q) !== -1
+      );
+    });
+    renderLogs(filtered);
+  }
+
+  function refresh() {
+    return fetch("/api/logs").then(function(res) { return res.json(); }).then(function(logs) {
+      allLogs = logs;
+      applyFilter();
+    }).catch(function() {});
+  }
+
+  document.getElementById("searchBox").addEventListener("input", applyFilter);
+  refresh();
+  setInterval(refresh, 2000);
+</script>
+
+<script>
+  fetch("/api/status").then(function(r){return r.json();}).then(function(d){
+    var b = document.getElementById("osBadge");
+    if (b) b.textContent = (d.os_name || "-") + (d.os_release ? " " + d.os_release : "");
+  }).catch(function(){});
+</script>
+</body>
+</html>
