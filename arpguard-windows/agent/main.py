@@ -48,6 +48,7 @@ from engine import whitelist
 from utils.hostname import resolve_hostname
 from utils.block import block_attacker
 from utils.network_scan import start_periodic_scan
+from utils.windows_iface import get_friendly_name
 from api.server import app
 
 
@@ -202,9 +203,10 @@ class Defender:
 
         self.log("Starting network discovery on clean baseline...")
         self.baseline = discover_trusted_gateway()
+        interface_display = get_friendly_name(self.baseline.interface)
         self.log(f"Trusted gateway: {self.baseline.gateway_ip} -> {self.baseline.gateway_mac}")
-        self.log(f"Interface: {self.baseline.interface}  Local IP: {self.baseline.local_ip}")
-        shared_state.update_baseline(self.baseline)
+        self.log(f"Interface: {interface_display}  Local IP: {self.baseline.local_ip}")
+        shared_state.update_baseline(self.baseline, interface_display=interface_display)
 
         trusted_dns = get_trusted_dns_servers()
         self.log(f"Trusted DNS servers: {trusted_dns if trusted_dns else 'none found - DNS module inactive'}")

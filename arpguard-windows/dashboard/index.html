@@ -308,7 +308,7 @@
       }
       lastStatus = data.status;
       document.getElementById("osBadge").textContent = (data.os_name || "-") + (data.os_release ? " " + data.os_release : "");
-      document.getElementById("netInterface").textContent = data.interface || "-";
+      document.getElementById("netInterface").textContent = data.interface_display || data.interface || "-";
       document.getElementById("netLocal").textContent = data.local_ip || "-";
       document.getElementById("netGwIp").textContent = data.gateway_ip || "-";
       document.getElementById("netGwMac").textContent = data.gateway_mac || "-";
