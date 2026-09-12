@@ -19,36 +19,67 @@ Every device on a WiFi network uses **ARP** to find its router and ARP has no bu
 
 ---
 
-## Repository structure
+## Get it pick your platform
 
-```
-arp-guard/
-├── README.md              ← you are here
-├── ARCHITECTURE.md        ← system design, trust model, data flow
-├── ROADMAP.md             ← project phases and objectives
-├── RUNBOOK.md             ← lab setup and demo run order
-│
-├── linux/                 ← run this on the Linux victim machine
-│   ├── README.md          ← Linux install & setup guide
-│   └── ...                (identical codebase to window/)
-│
-└── window/                ← run this on the Windows victim machine
-    ├── README.md          ← Windows install & setup guide
-    └── ...                (identical codebase to linux/)
+### 🐧 Linux
+
+```bash
+git clone https://github.com/arthghori/ARP-Guard.git
+cd ARP-Guard/arpguard-linux/agent
 ```
 
-`linux/` and `window/` contain the **same cross-platform codebase** every file automatically detects which OS it's running on and uses the right system commands (e.g. `arptables` vs Windows Firewall, `ip neigh` vs `arp -s`). They're kept as separate folders here purely so both platforms can be demoed side by side without needing to reconfigure anything between runs.
+Full setup instructions: **[arpguard-linux/README.md](./arpguard-linux/README.md)**
+
+### 🪟 Windows one-click installer (recommended)
+
+**[⬇ Download ARPGuard.exe](https://github.com/arthghori/ARP-Guard/releases/latest/download/ARPGuard.exe)**
+
+Double-click it. First run shows a setup wizard (pick an install folder, it handles Python/Npcap/dependencies automatically). Every run after that launches straight to the dashboard.
+
+Full details: **[arpguard-windows/README.md](./arpguard-windows/README.md)**
+
+### 🪟 Windows manual setup (alternative)
+
+```powershell
+git clone https://github.com/arthghori/ARP-Guard.git
+cd ARP-Guard/arpguard-windows/agent
+```
+
+Then follow the manual steps in the Windows README above.
 
 ---
 
-## Quick start
+## Repository structure
 
-Pick your platform and follow its guide:
+```
+ARP-Guard/
+├── README.md                 ← you are here
+├── ARCHITECTURE.md            system design, trust model, data flow
+├── ROADMAP.md                 project phases and objectives
+├── RUNBOOK.md                 lab setup and demo run order
+│
+├── arpguard-linux/            run this on the Linux victim machine
+│   ├── README.md
+│   └── agent/
+│       ├── main.py
+│       ├── requirements.txt
+│       ├── discovery/
+│       ├── detectors/
+│       ├── protection/
+│       ├── engine/
+│       ├── api/
+│       ├── utils/
+│       └── dashboard/
+│
+├── arpguard-windows/          run this on the Windows victim machine
+│   ├── README.md
+│   └── agent/                 (identical codebase to arpguard-linux/agent)
+│
+└── arpguard-installer/        source for the Windows .exe (not needed to just run the app)
+    └── ARPGuardInstaller.py
+```
 
-- **[Linux setup guide →](./linux/README.md)**
-- **[Windows setup guide →](./window/README.md)**
-
-Both guides cover installation, running the agent, opening the dashboard, and resetting between demo runs.
+`arpguard-linux/agent` and `arpguard-windows/agent` contain the **same cross-platform codebase** every file automatically detects which OS it's running on and uses the right system commands (e.g. `arptables` vs Windows Firewall, `ip neigh` vs `arp -s`). They're kept as separate folders purely so both platforms can be demoed side by side without reconfiguring anything.
 
 ---
 
@@ -64,6 +95,7 @@ Both guides cover installation, running the agent, opening the dashboard, and re
 | Live dashboard | Status console, network map, full searchable logs, exportable session report |
 | SQLite persistence | Every event is logged to disk, surviving an agent restart |
 | Cross-platform | One codebase, runs natively on both Linux and Windows |
+| One-click Windows installer | GUI wizard that handles Python, Npcap, and setup automatically |
 
 ---
 
@@ -82,7 +114,7 @@ Both guides cover installation, running the agent, opening the dashboard, and re
 
 ## Technology stack
 
-Python 3 · Scapy · FastAPI · Uvicorn · SQLite · arptables/iptables (Linux) · Windows Firewall (Windows) · HTML/CSS/JS
+Python 3 · Scapy · FastAPI · Uvicorn · SQLite · arptables/iptables (Linux) · Windows Firewall (Windows) · PyInstaller (Windows installer) · HTML/CSS/JS
 
 ---
 

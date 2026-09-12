@@ -12,7 +12,31 @@ This guide covers installing and running ARP Guard on Linux (tested on Kali Linu
 
 ---
 
-## 1. Install system dependencies
+## 1. Clone the repository
+
+```bash
+git clone https://github.com/arthghori/ARP-Guard.git
+cd ARP-Guard/arpguard-linux/agent
+```
+
+If you don't have `git` installed:
+
+```bash
+sudo apt update
+sudo apt install -y git
+```
+
+**Alternative download without git:**
+
+```bash
+wget https://github.com/arthghori/ARP-Guard/archive/refs/heads/main.zip
+unzip main.zip
+cd ARP-Guard-main/arpguard-linux/agent
+```
+
+---
+
+## 2. Install system dependencies
 
 ```bash
 sudo apt update
@@ -31,10 +55,9 @@ What each package is for:
 
 ---
 
-## 2. Set up the project
+## 3. Set up the Python environment
 
 ```bash
-cd linux
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
@@ -44,7 +67,7 @@ This installs `scapy`, `fastapi`, and `uvicorn` into the virtual environment.
 
 ---
 
-## 3. Run the agent
+## 4. Run the agent
 
 **Must be started BEFORE the attacker begins spoofing** it captures a clean network baseline at startup, which is the foundation of how it detects tampering later.
 
@@ -69,7 +92,7 @@ You should see output like:
 
 ---
 
-## 4. Open the dashboard
+## 5. Open the dashboard
 
 On the same machine, open a browser to:
 
@@ -79,7 +102,7 @@ http://127.0.0.1:8000
 
 ---
 
-## 5. Resetting between demo runs
+## 6. Resetting between demo runs
 
 Blocking rules (`arptables`/`iptables`) persist in the kernel even after you stop the agent. Clear them before each fresh run:
 
@@ -97,23 +120,15 @@ sudo ip neigh flush all
 
 ---
 
-## Troubleshooting
-
-| Symptom | Fix |
-|---|---|
-| `ModuleNotFoundError: No module named 'discovery'` | You're not running from inside the `linux/` folder, or files got flattened out of their subfolders check with `ls -la` that `discovery/`, `detectors/`, etc. are actual folders |
-| `No default gateway found` | Not connected to a network connect first |
-| `No ARP reply from gateway` | Check the interface name, or the network hasn't finished coming up yet |
-| `Permission denied` on startup | Forgot `sudo` |
-| Attacker IP stuck on "resolving..." | Wait a few seconds the periodic subnet scan resolves it automatically |
-| Attempt counter still climbing after block | Expected see [ARCHITECTURE.md](../ARCHITECTURE.md) for why packet capture sees traffic before the firewall drops it. The real `attack_count` freezes on block; only a separate "rejected retries" counter climbs |
-
----
-
-## Full command reference
+## Full command reference (copy-paste block)
 
 ```bash
-# One-time setup
+# Clone and enter the project
+git clone https://github.com/arthghori/ARP-Guard.git
+cd ARP-Guard/arpguard-linux/agent
+
+# One-time system + Python setup
+sudo apt update
 sudo apt install -y python3 python3-pip python3-venv arptables samba-common-bin iproute2
 python3 -m venv venv
 source venv/bin/activate
@@ -125,3 +140,16 @@ sudo $(which python3) main.py
 # Between demo runs
 ./reset_demo.sh
 ```
+
+---
+
+## Troubleshooting
+
+| Symptom | Fix |
+|---|---|
+| `ModuleNotFoundError: No module named 'discovery'` | You're not running from inside `arpguard-linux/agent`, or files got flattened out of their subfolders check with `ls -la` that `discovery/`, `detectors/`, etc. are actual folders sitting next to `main.py` |
+| `No default gateway found` | Not connected to a network connect first |
+| `No ARP reply from gateway` | Check the interface name, or the network hasn't finished coming up yet |
+| `Permission denied` on startup | Forgot `sudo` |
+| Attacker IP stuck on "resolving..." | Wait a few seconds the periodic subnet scan resolves it automatically |
+| Attempt counter still climbing after block | Expected packet capture sees traffic before the firewall drops it. The real `attack_count` freezes on block; only a separate "rejected retries" counter climbs. See [ARCHITECTURE.md](../ARCHITECTURE.md) |

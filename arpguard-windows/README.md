@@ -1,66 +1,76 @@
 # ARP Guard Windows Setup Guide
 
-This guide covers installing and running ARP Guard on Windows 10/11.
+Two ways to run ARP Guard on Windows: the one-click installer (recommended), or manual setup if you want full control.
 
 ---
 
-## Requirements
+## Option A: One-click installer (recommended)
 
-- Python 3.8 or newer
-- [Npcap](https://npcap.com/) (packet capture driver Scapy needs this on Windows)
-- Administrator access (needed for raw packet capture and firewall rules)
-- A network adapter connected to the same network as the attacker machine
+### 1. Download
+
+**[⬇ Download ARPGuard.exe](https://github.com/arthghori/ARP-Guard/releases/latest/download/ARPGuard.exe)**
+
+This link always points to the latest release, regardless of version number.
+
+### 2. Run it
+
+Double-click `ARPGuard.exe`. Windows will show a security prompt (since it's a new, unsigned executable) click **"More info" → "Run anyway"**. It will then ask for Administrator permission (required for packet capture and firewall rules) click **Yes**.
+
+### 3. First run: setup wizard
+
+- Pick an install folder (default: your user folder a subfolder named `ARPGuard` gets created there)
+- Leave all checkboxes ticked (Install Python, Install Npcap, Download from GitHub, Install dependencies, Launch when done)
+- Click **Start installation**
+- Watch the log it downloads and installs everything, then launches the agent and opens the dashboard automatically
+
+### 4. Every run after that
+
+Double-click `ARPGuard.exe` again it remembers the install location and launches straight to the dashboard, no wizard, no clicks needed.
 
 ---
 
-## 1. Install Python
+## Option B: Manual setup
+
+If you'd rather set it up yourself without the installer:
+
+### 1. Install Python
 
 1. Download from **https://www.python.org/downloads**
 2. Run the installer
-3. **Important:** on the first install screen, check the box:
-   ☑ **"Add python.exe to PATH"**
-4. Click **Install Now**
-5. Verify: open Command Prompt and run:
-   ```
-   python --version
-   ```
-   Should print a version number, not "not recognized".
+3. **Important:** check the box **"Add python.exe to PATH"** on the first screen
+4. Verify: `python --version` in Command Prompt should show a version number
 
----
-
-## 2. Install Npcap
-
-This is what lets Scapy capture packets on Windows the project will not work without it.
+### 2. Install Npcap
 
 1. Download from **https://npcap.com/#download**
-2. Right-click the installer → **Run as administrator**
-3. During install, confirm this box is checked:
-   ☑ **"Install Npcap in WinPcap API-compatible Mode"**
-4. Finish the install
-5. Verify: open Command Prompt and run:
-   ```
-   sc query npcap
-   ```
-   Should show `STATE : RUNNING` or `STOPPED` not "service does not exist".
+2. Right-click → **Run as administrator**
+3. Confirm **"Install Npcap in WinPcap API-compatible Mode"** is checked
+4. Verify: `sc query npcap` should show `RUNNING` or `STOPPED`, not "service does not exist"
 
----
-
-## 3. Set up the project
-
-Open **Command Prompt or PowerShell as Administrator** (right-click → "Run as administrator"), then:
+### 3. Clone the repository
 
 ```powershell
-cd window
+git clone https://github.com/arthghori/ARP-Guard.git
+cd ARP-Guard\arpguard-windows\agent
+```
+
+Don't have git? Download the ZIP instead:
+```powershell
+# In a browser, go to:
+# https://github.com/arthghori/ARP-Guard/archive/refs/heads/main.zip
+# Extract it, then:
+cd ARP-Guard-main\arpguard-windows\agent
+```
+
+### 4. Install dependencies
+
+Open Command Prompt or PowerShell **as Administrator**:
+
+```powershell
 pip install -r requirements.txt
 ```
 
-This installs `scapy`, `fastapi`, and `uvicorn`.
-
----
-
-## 4. Run the agent
-
-**Must be started BEFORE the attacker begins spoofing** it captures a clean network baseline at startup.
+### 5. Run the agent
 
 Still in the Administrator terminal:
 
@@ -68,23 +78,7 @@ Still in the Administrator terminal:
 python main.py
 ```
 
-You should see output like:
-
-```
-[10:31:02] Operating system: Windows 10
-[10:31:02] Database initialized, whitelist loaded.
-[10:31:03] Starting network discovery on clean baseline...
-[10:31:03] Trusted gateway: 192.168.1.1 -> aa:bb:cc:dd:ee:ff
-[10:31:03] Dashboard running at http://127.0.0.1:8000
-[10:31:03] Auto-block: ENABLED (threshold: 90s)
-[10:31:03] Monitoring ARP and DNS traffic. Ctrl+C to stop.
-```
-
----
-
-## 5. Open the dashboard
-
-On the same machine, open a browser to:
+### 6. Open the dashboard
 
 ```
 http://127.0.0.1:8000
@@ -92,9 +86,9 @@ http://127.0.0.1:8000
 
 ---
 
-## 6. Resetting between demo runs
+## Resetting between demo runs
 
-Firewall block rules persist even after you stop the agent. Clear them before each fresh run, from an Administrator PowerShell:
+Firewall block rules persist even after you stop the agent. From an Administrator PowerShell:
 
 ```powershell
 .\reset_demo.ps1
@@ -117,24 +111,27 @@ This is a genuine platform limitation, not a bug worth mentioning if asked durin
 
 | Symptom | Fix |
 |---|---|
-| `ModuleNotFoundError: No module named 'discovery'` | Not running from inside the `window/` folder, or files got flattened check with `dir` that `discovery`, `detectors`, etc. are real folders |
-| `Could not determine default gateway... make sure Npcap is installed` | Npcap missing, or WinPcap-compatible mode wasn't checked during install reinstall |
-| `Access denied` / permission errors | Terminal isn't running as Administrator |
+| Windows SmartScreen blocks the .exe | Click "More info" → "Run anyway" this is expected for a new, unsigned executable |
+| `ModuleNotFoundError: No module named 'discovery'` | Not running from inside `arpguard-windows\agent`, or files got flattened check with `dir` that `discovery`, `detectors`, etc. are real folders next to `main.py` |
+| `Could not determine default gateway... make sure Npcap is installed` | Npcap missing, or WinPcap-compatible mode wasn't checked reinstall |
+| `Access denied` / permission errors | Terminal (or the .exe) isn't running as Administrator |
 | `No default gateway found` | Not connected to Wi-Fi/Ethernet connect first |
 | Block button says "Attacker IP not resolved yet" | Normal wait a few seconds for the subnet scan, then try again |
 | `pip` not recognized | Try `python -m pip install -r requirements.txt` instead |
+| Dashboard shows "site can't be reached" | Check the separate agent console window that opened it shows the real error (commonly Npcap or Administrator-related) |
 
 ---
 
-## Full command reference
+## Full command reference (manual setup)
 
 ```powershell
-# One-time setup (as Administrator)
+git clone https://github.com/arthghori/ARP-Guard.git
+cd ARP-Guard\arpguard-windows\agent
 pip install -r requirements.txt
-
-# Every time you run the demo (as Administrator)
 python main.py
+```
 
-# Between demo runs (as Administrator)
+```powershell
+# Between demo runs
 .\reset_demo.ps1
 ```
