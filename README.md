@@ -1,135 +1,239 @@
 # ARP Guard
 
-**A host-based endpoint defense agent that detects and automatically reverses ARP spoofing and DNS spoofing attacks in real time with a live dashboard, automatic blocking, and full cross-platform support (Linux + Windows).**
+**ARP Guard is a host-based endpoint defense agent for detecting and responding to ARP spoofing, DNS spoofing, and local man-in-the-middle activity.** It monitors the machine it runs on, compares network traffic with a trusted startup baseline, automatically restores compromised state, and provides a live dashboard for investigation and response.
 
-Built for Innovation Day as a working proof-of-concept, not just a monitoring dashboard: this agent actively restores the correct network state the moment an attack is detected, with no human action required.
+This project was built as a working Innovation Day proof of concept. It is designed to demonstrate active defensive behavior rather than passive alerting: detection, restoration, tracking, blocking, and audit logging happen on the protected endpoint.
 
----
+> **Defensive scope:** ARP Guard protects one endpoint at a time. It does not monitor an entire network and never performs counter-attacks.
 
-## The problem
+## Table of contents
 
-Every device on a WiFi network uses **ARP** to find its router and ARP has no built-in authentication. Any attacker on the same network can lie about being the router, redirecting a victim's traffic through themselves. This is the foundation of most real-world Man-in-the-Middle (MITM) attacks.
+- [Why it exists](#why-it-exists)
+- [How it works](#how-it-works)
+- [Features](#features)
+- [Quick start](#quick-start)
+- [Dashboard](#dashboard)
+- [Repository layout](#repository-layout)
+- [Architecture](#architecture)
+- [Lab demonstration](#lab-demonstration)
+- [Technology](#technology)
+- [Limitations](#limitations)
+- [Documentation](#documentation)
+- [Authorized use](#authorized-use)
 
-## What ARP Guard does
+## Why it exists
 
-1. **Detects** ARP and DNS spoofing the moment they happen, by continuously verifying the endpoint's network state against a trusted baseline captured before any attack begins
-2. **Automatically restores** the correct network state no human has to click anything
-3. **Shows the entire fight live** attacker IP/MAC/hostname, a network map, full audit logs, and manual or automatic blocking
-4. **Never attacks back** pure defense only, by design
+ARP has no built-in authentication. A device on the same local network can send forged ARP messages claiming to be the gateway and redirect traffic through itself. DNS spoofing creates a similar problem by sending a victim false answers from an untrusted source. Together, these techniques are common foundations for local MITM attacks.
 
----
+Most monitoring tools stop at raising an alert. ARP Guard is intended to close the response loop:
 
-## Get it pick your platform
+1. Capture a clean network baseline before an attack starts.
+2. Detect changes that conflict with that baseline.
+3. Restore the endpoint's correct ARP or DNS state automatically.
+4. Track the activity and expose it in the dashboard.
+5. Block persistent attackers manually or after the automatic threshold.
 
-### 🐧 Linux
+## How it works
+
+At startup, ARP Guard discovers the local interface, endpoint address, default gateway, gateway MAC address, and configured DNS resolvers. These values form a trusted baseline and are not silently replaced by later observations.
+
+During monitoring:
+
+- The ARP detector watches for unexpected claims about the trusted gateway.
+- The DNS detector checks responses against trusted resolver information.
+- The protection layer restores the local network state and flushes the DNS cache when required.
+- The attacker tracker groups ARP and DNS activity by attacker MAC address.
+- The SQLite database records events, blocks, whitelist entries, and audit history.
+- The local FastAPI server publishes current state to the dashboard.
+
+The agent must start **before** the attack begins. If the baseline is captured after the network has already been compromised, the compromised values may be treated as trusted.
+
+## Features
+
+| Capability | Description |
+|---|---|
+| ARP spoofing detection | Compares gateway announcements with the trusted gateway MAC captured at startup. |
+| Automatic ARP restoration | Repairs the local ARP mapping and broadcasts a correction when an unexpected mapping is detected. |
+| DNS spoofing detection | Flags DNS responses from sources that are not part of the trusted resolver baseline. |
+| Automatic DNS recovery | Flushes the local DNS cache after a suspicious DNS event. |
+| Attacker tracking | Merges ARP and DNS activity from the same attacker into one record. |
+| Manual blocking | Blocks an attacker from the dashboard. |
+| Automatic blocking | Blocks an attacker after sustained activity, using a default threshold of 90 seconds. |
+| Trusted-device whitelist | Prevents known legitimate devices from being flagged. |
+| Live dashboard | Provides status, attacker activity, network context, and response history. |
+| Persistent audit log | Stores events in SQLite so the history survives an agent restart. |
+| Cross-platform operation | Uses the appropriate Linux or Windows networking and firewall commands. |
+| Windows installer | Provides a one-click setup flow for Python, Npcap, dependencies, and launch. |
+
+## Quick start
+
+Choose the instructions for the operating system running on the protected endpoint. Both platform directories contain the same application design and dashboard; only operating-system integrations differ.
+
+### Linux
+
+Requirements:
+
+- Python 3.8 or newer
+- `sudo` or root access for packet capture and firewall rules
+- A connected network interface
 
 ```bash
 git clone https://github.com/arthghori/ARP-Guard.git
 cd ARP-Guard/arpguard-linux/agent
+sudo apt update
+sudo apt install -y python3 python3-pip python3-venv arptables samba-common-bin iproute2
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+sudo $(which python3) main.py
 ```
 
-Full setup instructions: **[arpguard-linux/README.md](./arpguard-linux/README.md)**
+Open `http://127.0.0.1:8000` after the console reports that the dashboard is running. For reset commands and troubleshooting, see the [Linux setup guide](./arpguard-linux/README.md).
 
-### 🪟 Windows one-click installer (recommended)
+### Windows installer
 
-**[⬇ Download ARPGuard.exe](https://github.com/arthghori/ARP-Guard/releases/latest/download/ARPGuard.exe)**
+The recommended Windows path is the latest packaged installer:
 
-Double-click it. First run shows a setup wizard (pick an install folder, it handles Python/Npcap/dependencies automatically). Every run after that launches straight to the dashboard.
+[Download ARPGuard.exe](https://github.com/arthghori/ARP-Guard/releases/latest/download/ARPGuard.exe)
 
-Full details: **[arpguard-windows/README.md](./arpguard-windows/README.md)**
+Run it as administrator. On the first run, the setup wizard can install Python and Npcap, download the project, install dependencies, and launch the agent. Later runs use the saved installation and open the dashboard directly.
 
-### 🪟 Windows manual setup (alternative)
+### Windows manual setup
+
+Install Python and Npcap first. Npcap should be installed in WinPcap-compatible mode. Then open an Administrator PowerShell:
 
 ```powershell
 git clone https://github.com/arthghori/ARP-Guard.git
-cd ARP-Guard/arpguard-windows/agent
+cd ARP-Guard\arpguard-windows\agent
+python -m pip install -r requirements.txt
+python main.py
 ```
 
-Then follow the manual steps in the Windows README above.
+Open `http://127.0.0.1:8000`. The complete [Windows setup guide](./arpguard-windows/README.md) includes Npcap, installer, reset, and troubleshooting details.
 
----
+## Dashboard
 
-## Repository structure
+The dashboard is served locally by the same process as the agent. Protection continues even when no browser window is open.
 
-```
+| Route | Purpose |
+|---|---|
+| `/` | Live protection state, attacker feed, and activity ticker |
+| `/blocklist` | Manual blocks and automatic-block progress |
+| `/network` | Gateway, endpoint, and attacker network map |
+| `/whitelist` | Add or remove trusted devices |
+| `/logs` | Searchable event history and session export |
+| `/overview` | Project objective, concepts, architecture, and limitations |
+
+## Repository layout
+
+```text
 ARP-Guard/
-├── README.md                 ← you are here
-├── ARCHITECTURE.md            system design, trust model, data flow
-├── ROADMAP.md                 project phases and objectives
-├── RUNBOOK.md                 lab setup and demo run order
-│
-├── arpguard-linux/            run this on the Linux victim machine
-│   ├── README.md
-│   └── agent/
-│       ├── main.py
-│       ├── requirements.txt
-│       ├── discovery/
-│       ├── detectors/
-│       ├── protection/
-│       ├── engine/
-│       ├── api/
-│       ├── utils/
-│       └── dashboard/
-│
-├── arpguard-windows/          run this on the Windows victim machine
-│   ├── README.md
-│   └── agent/                 (identical codebase to arpguard-linux/agent)
-│
-└── arpguard-installer/        source for the Windows .exe (not needed to just run the app)
-    └── ARPGuardInstaller.py
+├── README.md
+├── ARCHITECTURE.md              System design and trust model
+├── ROADMAP.md                   Completed work and planned work
+├── RUNBOOK.md                   Victim/attacker lab demonstration
+├── arpguard-linux/
+│   ├── README.md                Linux installation guide
+│   ├── reset_demo.sh            Linux demo reset script
+│   └── agent/                   Cross-platform agent source
+├── arpguard-windows/
+│   ├── README.md                Windows installation guide
+│   ├── reset_demo.ps1           Windows demo reset script
+│   ├── arpguard-installer/      Source for the Windows installer
+│   └── agent/                   Cross-platform agent source
+└── ...
 ```
 
-`arpguard-linux/agent` and `arpguard-windows/agent` contain the **same cross-platform codebase** every file automatically detects which OS it's running on and uses the right system commands (e.g. `arptables` vs Windows Firewall, `ip neigh` vs `arp -s`). They're kept as separate folders purely so both platforms can be demoed side by side without reconfiguring anything.
+The Linux and Windows agent directories intentionally mirror one another so both platforms can be demonstrated independently. Platform-specific behavior is selected at runtime, including ARP table updates, firewall blocking, DNS cache flushing, hostname lookup, and interface discovery.
 
----
+Within each agent, the main areas are:
 
-## Core features
-
-| Feature | Description |
+| Directory | Responsibility |
 |---|---|
-| ARP spoofing detection & auto-restore | Verifies the gateway's real MAC against a trusted baseline; restores it automatically on mismatch |
-| DNS spoofing detection | Flags DNS responses from untrusted sources; flushes the local DNS cache in response |
-| Manual + automatic blocking | Block an attacker with one click, or let the agent auto-block after sustained attack (default: 90s) |
-| Per-attacker tracking | ARP and DNS activity from the same attacker MAC merge into one row, not scattered logs |
-| Trusted device whitelist | Mark known devices as safe so they're never flagged |
-| Live dashboard | Status console, network map, full searchable logs, exportable session report |
-| SQLite persistence | Every event is logged to disk, surviving an agent restart |
-| Cross-platform | One codebase, runs natively on both Linux and Windows |
-| One-click Windows installer | GUI wizard that handles Python, Npcap, and setup automatically |
+| `discovery/` | Gateway, interface, and DNS baseline discovery |
+| `detectors/` | ARP and DNS packet inspection |
+| `protection/` | ARP restoration and DNS cache recovery |
+| `engine/` | State, policy, attacker tracking, whitelist, and SQLite persistence |
+| `api/` | FastAPI routes and local API server |
+| `utils/` | Blocking, hostname resolution, network scanning, and platform helpers |
+| `dashboard/` | Six HTML dashboard pages |
 
----
+## Architecture
 
-## Dashboard pages
+The application runs as one Python process. `main.py` starts discovery, launches the ARP and DNS monitoring work, and serves the dashboard through FastAPI.
 
-| Page | Purpose |
-|---|---|
-| `/` | Live status, attacker feed, activity ticker |
-| `/blocklist` | Manage blocks, see auto-block progress per attacker |
-| `/network` | Visual network map gateway, endpoint, attackers |
-| `/whitelist` | Add/remove trusted devices |
-| `/logs` | Full searchable event log, export as a report |
-| `/overview` | Project pitch objective, concepts, architecture, limitations |
+```text
+Clean startup
+    |
+    v
+Trusted gateway + DNS baseline
+    |
+    v
+ARP/DNS detectors ---> whitelist check ---> baseline comparison
+                                             |
+                         +-------------------+-------------------+
+                         |                                       |
+                         v                                       v
+                 Restore network state                    Track and log event
+                         |                                       |
+                         +-------------------+-------------------+
+                                             |
+                                             v
+                                   Dashboard and policy
+```
 
----
+The central design principle is: **do not derive trusted state from the data source being defended.** The gateway baseline is actively discovered at clean startup, and configured DNS resolvers are read from the operating system rather than learned from suspicious traffic.
 
-## Technology stack
+For the full module breakdown and data flow, see [ARCHITECTURE.md](./ARCHITECTURE.md).
 
-Python 3 · Scapy · FastAPI · Uvicorn · SQLite · arptables/iptables (Linux) · Windows Firewall (Windows) · PyInstaller (Windows installer) · HTML/CSS/JS
+## Lab demonstration
 
----
+Use two machines on a lab network that you own or are explicitly authorized to test:
 
-## Honest limitations
+- **Victim:** runs ARP Guard on Linux or Windows.
+- **Attacker:** runs a controlled test tool such as Bettercap.
 
-- Attacker IP attribution is heuristic the forged packet only reveals the attacker's MAC, so IP is learned via passive traffic and active subnet scanning
-- Hostname resolution is best-effort (reverse DNS / NetBIOS) and may show "Unknown"
-- Windows blocking is IP-based only (no MAC-layer blocking exists on Windows) see the Windows guide for detail
-- WiFi deauthentication detection is architecturally planned but not implemented it requires monitor-mode-capable WiFi hardware not available in this build
-- Protects the single endpoint it runs on, not the whole network
+The high-level demonstration is:
 
-See [ARCHITECTURE.md](./ARCHITECTURE.md) for the full design rationale, including the trust-verification model this project is built around.
+1. Start ARP Guard and wait for the protected state.
+2. Open the local dashboard.
+3. Start a controlled ARP spoofing test from the attacker machine.
+4. Observe detection, restoration, attacker tracking, and audit logging.
+5. Optionally test DNS spoofing and verify that activity is merged into the same attacker record.
+6. Use the dashboard block action or wait for the 90-second automatic threshold.
+7. Reset firewall and ARP rules before the next run.
 
----
+The [runbook](./RUNBOOK.md) contains the full lab topology, Bettercap commands, expected state transitions, and reset procedures.
 
-## Authorized use only
+## Technology
 
-This tool is intended for use in a lab environment you own or have explicit permission to test. It performs no offensive actions it only detects and restores state on the machine it runs on.
+- Python 3
+- Scapy for packet capture and network inspection
+- FastAPI and Uvicorn for the local API and dashboard server
+- SQLite for persistent state and audit logging
+- HTML, CSS, and JavaScript for the dashboard
+- Linux: `arptables`, `iptables`, `ip neigh`, `resolvectl`
+- Windows: Windows Firewall, `arp`, `ipconfig /flushdns`, and Npcap
+- PyInstaller for the Windows installer executable
+
+## Limitations
+
+- **Endpoint scope:** protects only the machine where the agent is running.
+- **Baseline trust:** startup must occur on a clean network; the agent cannot independently prove that the initial network state is uncompromised.
+- **IP attribution:** a forged packet primarily exposes an attacker MAC. The agent learns the corresponding IP through passive observation and subnet scanning, so attribution can take time or remain incomplete.
+- **Hostname resolution:** reverse DNS and NetBIOS resolution are best effort and may report `Unknown`.
+- **Windows blocking:** Windows Firewall blocks by IP, not MAC. The attacker IP must be resolved before a Windows block can take effect. Linux can block at the MAC layer with `arptables`.
+- **Wi-Fi deauthentication:** detection is planned but not implemented because it requires monitor-mode-capable hardware.
+- **Local API security:** the prototype API is bound to localhost and does not provide production-grade authentication.
+
+## Documentation
+
+- [Architecture](./ARCHITECTURE.md): trust model, modules, and data flow
+- [Linux setup](./arpguard-linux/README.md): dependencies, launch, and reset
+- [Windows setup](./arpguard-windows/README.md): installer, manual setup, and troubleshooting
+- [Lab runbook](./RUNBOOK.md): controlled victim/attacker demonstration
+- [Roadmap](./ROADMAP.md): project goals, completed phases, and future work
+
+## Authorized use
+
+Use ARP Guard only on systems and networks you own or have explicit permission to test. It is intended for defensive lab work and endpoint protection. It performs no offensive actions and does not attempt to retaliate against an attacker.

@@ -56,9 +56,7 @@ cd ARP-Guard\arpguard-windows\agent
 
 Don't have git? Download the ZIP instead:
 ```powershell
-# In a browser, go to:
-# https://github.com/arthghori/ARP-Guard/archive/refs/heads/main.zip
-# Extract it, then:
+# Extract Zip, then:
 cd ARP-Guard-main\arpguard-windows\agent
 ```
 

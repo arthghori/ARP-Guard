@@ -72,7 +72,7 @@ This installs `scapy`, `fastapi`, and `uvicorn` into the virtual environment.
 **Must be started BEFORE the attacker begins spoofing** it captures a clean network baseline at startup, which is the foundation of how it detects tampering later.
 
 ```bash
-sudo $(which python3) main.py
+sudo python3 main.py
 ```
 
 Using `sudo $(which python3)` (instead of plain `sudo python3`) makes sure the *virtual environment's* Python is used even with elevated privileges a common trip-up otherwise.
@@ -128,14 +128,13 @@ git clone https://github.com/arthghori/ARP-Guard.git
 cd ARP-Guard/arpguard-linux/agent
 
 # One-time system + Python setup
-sudo apt update
 sudo apt install -y python3 python3-pip python3-venv arptables samba-common-bin iproute2
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 
 # Every time you run the demo
-sudo $(which python3) main.py
+sudo python3 main.py
 
 # Between demo runs
 ./reset_demo.sh
