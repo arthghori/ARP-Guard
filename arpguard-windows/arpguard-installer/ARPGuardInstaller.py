@@ -35,11 +35,12 @@ import zipfile
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 
-# ---- Configuration - update if the repo/branch/versions change ----
+# ---- Configuration - update if the repo/branch/folder names change ----
 GITHUB_OWNER = "arthghori"
 GITHUB_REPO = "ARP-Guard"
 GITHUB_BRANCH_CANDIDATES = ["main", "master"]  # tried in order until one works
-GITHUB_BASE_SUBFOLDER_TEMPLATE = "{repo}-{branch}/window/"  # matches GitHub's zip folder naming
+# Matches: https://github.com/arthghori/ARP-Guard/tree/main/arpguard-windows
+GITHUB_BASE_SUBFOLDER_TEMPLATE = "{repo}-{branch}/arpguard-windows/"
 PYTHON_INSTALLER_URL = "https://www.python.org/ftp/python/3.12.4/python-3.12.4-amd64.exe"
 NPCAP_INSTALLER_URL = "https://npcap.com/dist/npcap-1.79.exe"  # check npcap.com for the latest version
 DASHBOARD_URL = "http://127.0.0.1:8000"
@@ -446,11 +447,13 @@ class InstallerApp:
                 if not relative_path:
                     continue
 
-                # The repo currently has main.py/requirements.txt inside
-                # an extra "agent/" folder, while all other code folders
+                # Safety net: if the repo still has main.py/requirements.txt
+                # inside an extra "agent/" folder while other code folders
                 # (api/, dashboard/, etc.) sit as its siblings instead of
-                # inside it. Flatten "agent/" out so everything lands
-                # together the way main.py's imports actually expect.
+                # inside it, flatten "agent/" out so everything lands
+                # together the way main.py's imports actually expect. If
+                # the repo structure is already correct (everything inside
+                # agent/), this is a harmless no-op.
                 if relative_path.startswith("agent/"):
                     relative_path = relative_path[len("agent/"):]
                 if not relative_path:
@@ -465,8 +468,8 @@ class InstallerApp:
         if extracted == 0:
             raise RuntimeError(
                 f"Downloaded the zip successfully, but found no files under '{subfolder}'.\n"
-                f"Check the repo's file listing on GitHub to confirm the 'window' folder exists "
-                f"at the repo root."
+                f"Check the repo's file listing on GitHub to confirm the 'arpguard-windows' "
+                f"folder exists at the repo root."
             )
         self.log(f"  Extracted {extracted} file(s).")
 
@@ -530,3 +533,27 @@ if __name__ == "__main__":
     main()
 
 
+# =======================================================================
+# BUILDING THIS INTO A STANDALONE .EXE
+# =======================================================================
+#
+# On a Windows machine with Python installed, with icon.ico sitting in
+# the same folder as this script:
+#
+#   pip install pyinstaller
+#   pyinstaller --onefile --windowed --uac-admin --icon=icon.ico --name ARPGuard ARPGuardInstaller.py
+#
+# What each flag does:
+#   --onefile     bundles everything into a single .exe
+#   --windowed    no console window behind the GUI (it's a Tkinter app)
+#   --uac-admin   embeds a manifest so Windows prompts for Administrator
+#                 automatically when the .exe is double-clicked
+#   --icon        sets the .exe's icon (shown in Explorer, taskbar, and
+#                 the title bar) - needs a .ico file, not .png
+#   --name        output filename (ARPGuard.exe)
+#
+# The finished .exe lands in the dist/ folder. Hand that single file
+# to anyone: first double-click runs the setup wizard (with a folder
+# picker), every double-click after that goes straight to a
+# "Launch Dashboard" button - same .exe, two behaviors.
+# =======================================================================
