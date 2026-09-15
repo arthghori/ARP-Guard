@@ -5,11 +5,19 @@ GUI installer AND launcher for ARP Guard, in one .exe.
 
 Behavior:
   - FIRST RUN: shows the full setup wizard - pick an install folder,
-    checks/installs Python and Npcap if missing, downloads ARP Guard
-    from GitHub, installs dependencies, then launches it.
+    checks/installs Python and Npcap if missing, then gets ARP Guard's
+    code either from a local "arpguard-source" folder sitting next to
+    this app (no internet needed), or by downloading from GitHub if no
+    local copy is found. Installs dependencies, then launches it.
   - EVERY RUN AFTER: detects the previous install (via a small config
     file) and skips straight to a "Launch Dashboard" screen - one
     click starts the agent and opens the browser. No re-running setup.
+
+To avoid depending on internet access entirely (useful on networks
+that block GitHub's download domain), place a folder named
+"arpguard-source" next to this script/exe, containing main.py and the
+rest of the agent's files directly inside it. If found, it's used
+instead of downloading anything.
 
 Must run as Administrator - installing Python/Npcap system-wide and
 the agent's own firewall commands both require it. Elevates itself
@@ -24,6 +32,7 @@ import json
 import os
 import queue
 import shutil
+import socket
 import subprocess
 import sys
 import threading
@@ -34,6 +43,12 @@ import webbrowser
 import zipfile
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
+
+# Without this, urllib.request calls have NO timeout by default - if a
+# connection can't complete (blocked firewall, dead proxy, no internet),
+# the download step hangs forever with no error instead of failing
+# visibly. This bounds every network call in this script to 20 seconds.
+socket.setdefaulttimeout(20)
 
 # ---- Configuration - update if the repo/branch/folder names change ----
 GITHUB_OWNER = "arthghori"
@@ -292,7 +307,7 @@ class InstallerApp:
         opts = [
             (self.var_python, "Install Python (if missing)"),
             (self.var_npcap, "Install Npcap (if missing)"),
-            (self.var_download, "Download ARP Guard from GitHub"),
+            (self.var_download, "Get ARP Guard (local copy if present, else GitHub)"),
             (self.var_deps, "Install Python dependencies"),
             (self.var_launch, "Launch agent + open dashboard when done"),
         ]
@@ -401,8 +416,64 @@ class InstallerApp:
         self.log("  Npcap installed.")
 
     def step_download(self):
-        self.log(f"Downloading ARP Guard to {self.install_dir} ...")
+        self.log(f"Setting up ARP Guard at {self.install_dir} ...")
         os.makedirs(self.install_dir, exist_ok=True)
+
+        # Check for a LOCAL copy first - a folder named "arpguard-source"
+        # sitting next to this exe/script. If it's there, copy from it
+        # directly - no internet needed at all. This is what actually
+        # solves network-blocked situations (school/lab firewalls that
+        # block codeload.github.com), rather than just retrying the
+        # same download that keeps failing.
+        local_source = self._find_local_source()
+        if local_source:
+            self.log(f"  Found local copy at {local_source} - copying (no internet needed)...")
+            self._copy_local_source(local_source)
+            return
+
+        self.log("  No local copy found next to this app - downloading from GitHub instead...")
+        self._download_from_github()
+
+    def _find_local_source(self):
+        """
+        Looks for ARP Guard's source files next to wherever this app is
+        actually running from (works whether it's the raw .py script or
+        the compiled .exe). Checks BOTH possible layouts, since main.py
+        might sit directly inside "arpguard-source/" or one level deeper
+        inside "arpguard-source/agent/" - whichever one actually has
+        main.py in it is what gets used. Returns that folder's path, or
+        None if neither layout is found.
+        """
+        if getattr(sys, "frozen", False):
+            app_dir = os.path.dirname(sys.executable)
+        else:
+            app_dir = os.path.dirname(os.path.abspath(__file__))
+
+        candidates = [
+            os.path.join(app_dir, "arpguard-source"),
+            os.path.join(app_dir, "arpguard-source", "agent"),
+            os.path.join(app_dir, "..", "arpguard-source"),
+            os.path.join(app_dir, "..", "arpguard-source", "agent"),
+        ]
+        for candidate in candidates:
+            if os.path.exists(os.path.join(candidate, "main.py")):
+                return os.path.normpath(candidate)
+
+        return None
+
+    def _copy_local_source(self, local_source: str):
+        copied = 0
+        for root, dirs, files in os.walk(local_source):
+            for filename in files:
+                src_path = os.path.join(root, filename)
+                rel_path = os.path.relpath(src_path, local_source)
+                dst_path = os.path.join(self.install_dir, rel_path)
+                os.makedirs(os.path.dirname(dst_path), exist_ok=True)
+                shutil.copy2(src_path, dst_path)
+                copied += 1
+        self.log(f"  Copied {copied} file(s) from local source.")
+
+    def _download_from_github(self):
         zip_path = os.path.join(os.environ["TEMP"], "arpguard.zip")
 
         # Try each candidate branch name until one actually downloads -
@@ -422,16 +493,25 @@ class InstallerApp:
                 last_error = e
                 self.log(f"  Branch '{branch}' failed ({e.code} {e.reason}), trying next...")
                 continue
+            except (urllib.error.URLError, socket.timeout, ConnectionError, OSError) as e:
+                last_error = e
+                self.log(f"  Branch '{branch}' failed (network error: {e}), trying next...")
+                continue
 
         if working_branch is None:
             raise RuntimeError(
                 f"Could not download from any of these branches: {GITHUB_BRANCH_CANDIDATES}\n"
                 f"Owner/repo: {GITHUB_OWNER}/{GITHUB_REPO}\n"
                 f"Last error: {last_error}\n\n"
-                f"Open https://github.com/{GITHUB_OWNER}/{GITHUB_REPO} in a browser and confirm:\n"
-                f"  - the repo name/owner are typed exactly right\n"
-                f"  - the branch dropdown shows a name not listed above - if so, add it to "
-                f"GITHUB_BRANCH_CANDIDATES in the script"
+                f"This is usually a NETWORK problem, not a script problem:\n"
+                f"  - Open https://github.com/{GITHUB_OWNER}/{GITHUB_REPO} in a browser on this "
+                f"same machine - if that also fails/hangs, this machine can't reach GitHub "
+                f"(firewall, no internet, or a proxy blocking it)\n"
+                f"  - If the browser works fine but this keeps failing, a proxy or antivirus "
+                f"may be intercepting Python's network requests specifically\n"
+                f"  - If it's a genuine repo issue: confirm the repo name/owner are typed "
+                f"exactly right, and that the branch dropdown on GitHub shows a name not "
+                f"listed above (if so, add it to GITHUB_BRANCH_CANDIDATES in the script)"
             )
 
         subfolder = GITHUB_BASE_SUBFOLDER_TEMPLATE.format(repo=GITHUB_REPO, branch=working_branch)
