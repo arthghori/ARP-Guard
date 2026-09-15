@@ -1,4 +1,4 @@
-# ARP Guard — Run Guide (Victim + Attacker Lab)
+# ARP Guard Run Guide (Victim + Attacker Lab)
 
 This guide walks through running the full demo across two machines in
 a lab you control. Do this only on your own VMs/hardware, never on a
@@ -6,12 +6,12 @@ network you don't have explicit permission to test.
 
 ---
 
-## 0. Before you start — network setup
+## 0. Before you start network setup
 
 You need two machines that can see each other's traffic:
 
-- **Victim** — runs ARP Guard (Linux or Windows)
-- **Attacker** — runs Bettercap
+- **Victim** runs ARP Guard (Linux or Windows)
+- **Attacker** runs Bettercap
 
 **VirtualBox/VMware:** put both VMs on the same **Host-only** or
 **Bridged** network adapter, plus make sure both can reach a router/
@@ -48,12 +48,12 @@ sudo $(which python3) main.py
 
 Full details: [arpguard-linux/README.md](./arpguard-linux/README.md)
 
-### Windows — one-click installer
+### Windows one-click installer
 
 Download **[ARPGuard.exe](https://github.com/arthghori/ARP-Guard/releases/latest/download/ARPGuard.exe)**,
 double-click it, follow the wizard.
 
-### Windows — manual
+### Windows manual
 
 ```powershell
 git clone https://github.com/arthghori/ARP-Guard.git
@@ -64,7 +64,7 @@ python main.py
 
 Full details: [arpguard-windows/README.md](./arpguard-windows/README.md)
 
-**This must be started BEFORE the attack begins** — it captures a
+**This must be started BEFORE the attack begins** it captures a
 clean ARP and DNS baseline at startup. If it starts after the network
 is already compromised, it will trust the wrong values.
 
@@ -150,7 +150,7 @@ nslookup example.com
 | `Permission denied` (Linux) | Not run with `sudo` | `sudo $(which python3) main.py` |
 | `Access denied` (Windows) | Terminal not Administrator | Re-open as Administrator |
 | Attacker IP stuck on "resolving..." | Passive learning hasn't seen their real IP yet | Wait a few seconds for the periodic subnet scan |
-| Attempt counter frozen after block | **Expected** | Real `attack_count` freezes on block by design; a separate "rejected retries" counter tracks anything after that — see ARCHITECTURE.md |
+| Attempt counter frozen after block | **Expected** | Real `attack_count` freezes on block by design; a separate "rejected retries" counter tracks anything after that see ARCHITECTURE.md |
 | Windows: block button says IP not resolved | Windows can only block by IP, not MAC | Wait for the subnet scan, then retry |
 | Windows: dashboard unreachable after installer runs | Agent crashed on startup | Check the separate agent console window for the actual error (commonly Npcap or Administrator-related) |
 

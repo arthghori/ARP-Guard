@@ -1,4 +1,4 @@
-# ARP Guard — System Architecture
+# ARP Guard System Architecture
 
 > Host-based active defense agent against ARP spoofing, DNS spoofing,
 > and MITM attacks. Cross-platform (Linux + Windows).
@@ -27,7 +27,7 @@ only observes and corrects the local machine's own network state.
 - Network-wide monitoring of other hosts
 - Offensive/counter-attack capability
 - Production-grade authentication on the local API (out of scope for
-  an academic prototype — see [Section 10](#10-known-limitations))
+  an academic prototype see [Section 10](#10-known-limitations))
 
 ---
 
@@ -75,7 +75,7 @@ only observes and corrects the local machine's own network state.
 The agent and dashboard run as **one process**: `main.py` starts
 discovery, spins up the ARP and DNS detectors in background threads,
 and serves the dashboard from the same process via FastAPI. The
-dashboard is a convenience layer for visibility — the agent keeps
+dashboard is a convenience layer for visibility the agent keeps
 protecting the machine even with no browser open.
 
 ---
@@ -108,11 +108,11 @@ All future ARP/DNS traffic is checked AGAINST this baseline,
 never used to silently replace it
 ```
 
-This is why the agent **must start before the attack begins** — the
+This is why the agent **must start before the attack begins** the
 baseline can only be trusted if it was captured on a clean network.
 
 **Whitelist exception:** devices on the trusted-device whitelist are
-checked *before* this comparison — a whitelisted device is never
+checked *before* this comparison a whitelisted device is never
 flagged, even if its traffic would otherwise look like spoofing. This
 covers legitimate cases (router replacement, a second access point)
 that the trust model alone can't distinguish from an attack.
@@ -132,7 +132,7 @@ that the trust model alone can't distinguish from an attack.
 | `engine/attackers.py` | Per-attacker tracking (by MAC) across BOTH attack types; throttled blocked-retry logging |
 | `engine/policy.py` | Auto-block threshold configuration |
 | `engine/whitelist.py` | Trusted-device checks, backed by SQLite |
-| `engine/db.py` | SQLite persistence — every event survives an agent restart |
+| `engine/db.py` | SQLite persistence every event survives an agent restart |
 | `engine/runtime.py` | Shared reference so the API layer can trigger an immediate ARP restore |
 | `engine/state.py` | Overall agent status, network baseline, OS info |
 | `utils/block.py` | Attacker blocking (Linux: arptables/iptables, Windows: Windows Firewall) |
@@ -191,8 +191,8 @@ that the trust model alone can't distinguish from an attack.
                State → PROTECTED (immediate force_restore)
 ```
 
-This loop repeats every time the attacker re-poisons — which Bettercap
-typically does every few seconds — making a live demo naturally show
+This loop repeats every time the attacker re-poisons which Bettercap
+typically does every few seconds making a live demo naturally show
 several detect/restore cycles, then a block.
 
 ---
@@ -201,26 +201,26 @@ several detect/restore cycles, then a block.
 
 ```
         ┌───────────────┐
-        │  DISCOVERING   │  (startup only, clean-network assumption)
-        └───────┬────────┘
+        │  DISCOVERING  │  (startup only, clean-network assumption)
+        └───────┬───────┘
                 │
                 ▼
-        ┌───────────────┐
+        ┌────────────────┐
    ┌───▶│   PROTECTED    │◀────────────────┐
    │    └───────┬────────┘                  │
-   │            │ mismatch detected          │
-   │            ▼                            │
-   │    ┌────────────────┐                   │
-   │    │ ATTACK_DETECTED │                  │
-   │    └───────┬─────────┘                  │
-   │            ▼                            │
-   │    ┌────────────────┐                   │
-   │    │   RESTORING     │                  │
-   │    └───────┬─────────┘                  │
-   │            │                            │
-   │      success?                           │
-   │       ┌────┴────┐                       │
-   │       │  YES     │───────────────────────┘
+   │            │ mismatch detected         │
+   │            ▼                           │
+   │    ┌────────────────┐                  │
+   │    │ ATTACK_DETECTED│                  │
+   │    └───────┬────────┘                  │
+   │            ▼                           │
+   │    ┌────────────────┐                  │
+   │    │   RESTORING    │                  │
+   │    └───────┬────────┘                  │
+   │            │                           │
+   │      success?                          │
+   │       ┌────┴────┐                      │
+   │       │  YES    │──────────────────────┘
    │       ▼
    │  ATTACK_BLOCKED
    │
@@ -228,7 +228,7 @@ several detect/restore cycles, then a block.
 ```
 
 **Once an attacker is blocked**, further packets from them do not
-re-enter this cycle — they're silently corrected and logged separately
+re-enter this cycle they're silently corrected and logged separately
 (see Section 5), so the dashboard reads a calm PROTECTED state instead
 of flickering between states.
 
@@ -237,16 +237,16 @@ of flickering between states.
 ## 7. Cross-Platform Layer
 
 Every OS-facing operation has a Linux and Windows implementation
-behind a single shared interface — the rest of the codebase never
+behind a single shared interface the rest of the codebase never
 branches on platform itself:
 
 | Operation | Linux | Windows |
 |---|---|---|
-| Gateway/interface discovery | Scapy's own routing table (`conf.route`) — same code both platforms | same |
+| Gateway/interface discovery | Scapy's own routing table (`conf.route`) same code both platforms | same |
 | ARP table restore | `ip neigh` | `arp -d` / `arp -s` |
 | DNS baseline | `/etc/resolv.conf` | `ipconfig /all` parsing |
 | DNS cache flush | `resolvectl` / `systemd-resolve` | `ipconfig /flushdns` |
-| Attacker blocking | `arptables` (MAC layer) + `iptables` (IP layer) | Windows Firewall via `netsh` (**IP layer only** — no MAC-layer equivalent exists on Windows) |
+| Attacker blocking | `arptables` (MAC layer) + `iptables` (IP layer) | Windows Firewall via `netsh` (**IP layer only** no MAC-layer equivalent exists on Windows) |
 | Hostname resolution | `nmblookup` | `nbtstat` (built-in) |
 | Interface display name | N/A (already friendly) | Resolved via `scapy.arch.windows.get_windows_if_list()` |
 
@@ -300,19 +300,19 @@ agent/
 
 ## 10. Known Limitations
 
-- **No authentication on the local API** — acceptable for a
+- **No authentication on the local API** acceptable for a
   `127.0.0.1`-only demo, not acceptable if exposed beyond localhost
-- **Attacker IP attribution is heuristic** — the forged packet only
+- **Attacker IP attribution is heuristic** the forged packet only
   reveals the attacker's MAC; IP comes from passive observation and
   active subnet scanning, which takes a few seconds
 - **Windows blocking is IP-only** (no MAC-layer equivalent to
   `arptables` exists on Windows)
 - **Deauthentication detection requires monitor-mode-capable Wi-Fi
-  hardware** not available in this build — architecturally scoped but
+  hardware** not available in this build architecturally scoped but
   not implemented
-- **Single-host protection only** — defends the endpoint it runs on,
+- **Single-host protection only** defends the endpoint it runs on,
   not the whole network
-- **DNS validation checks origin, not content** — a full DNSSEC-style
+- **DNS validation checks origin, not content** a full DNSSEC-style
   answer-integrity check is out of scope for this prototype
 
 ---
