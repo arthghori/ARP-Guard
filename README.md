@@ -1,7 +1,7 @@
 # ARP Guard
 
 **ARP Guard is a host-based endpoint defense agent for detecting and responding to ARP spoofing, DNS spoofing, and local man-in-the-middle activity.** It monitors the machine it runs on, compares network traffic with a trusted startup baseline, automatically restores compromised state, and provides a live dashboard for investigation and response.
-
+ 
 This project was built as a working Innovation Day proof of concept. It is designed to demonstrate active defensive behavior rather than passive alerting: detection, restoration, tracking, blocking, and audit logging happen on the protected endpoint.
 
 > **Defensive scope:** ARP Guard protects one endpoint at a time. It does not monitor an entire network and never performs counter-attacks.
